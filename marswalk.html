@@ -466,6 +466,9 @@
   <div class="header-right">
     <span class="badge-nasa">NASA DATA</span>
     <span class="badge-ibm">IBM WATSONX</span>
+    <a href="demo-video.html" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">▶ DEMO</a>
+    <a href="https://github.com/walsal201/ai-astromind" target="_blank" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">GITHUB</a>
+    <a href="docs/architecture.md" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">DOCS</a>
     <a href="index.html" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">← HOME</a>
     <a href="prototype.html" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">ASTROMIND</a>
   </div>
@@ -554,6 +557,8 @@
       <div class="tab" onclick="showTab('terrain')">⛰ Terrain Profile</div>
       <div class="tab" onclick="showTab('science')">🔬 Science Targets</div>
       <div class="tab" onclick="showTab('hazards')">⚠ Hazard Map</div>
+      <div class="tab" onclick="showTab('timeline')">📅 EVA Timeline</div>
+      <div class="tab" onclick="showTab('brief')">📋 Mission Brief</div>
       <div class="tab" onclick="showTab('chat')">💬 AI Chat</div>
     </div>
 
@@ -868,6 +873,110 @@
       </div>
     </div>
 
+    <!-- ══════ EVA TIMELINE ══════ -->
+    <div id="tab-timeline" class="content tab-panel">
+      <div class="section-heading">EVA Timeline — Gantt Schedule</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:5px;padding:16px;margin-bottom:14px;">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;">LMST LOCAL MARS TIME — EVA START 09:00</div>
+        <div id="ganttChart" style="overflow-x:auto;"></div>
+      </div>
+      <div class="data-grid" style="margin-top:14px;">
+        <div class="data-card data-card-mola">
+          <div class="data-title">EVA Resource Budget</div>
+          <div class="data-source">Real-time consumption model</div>
+          <div class="data-val" id="tl-o2">O₂: 0.84 kg used</div>
+          <div class="data-desc">Per astronaut: 0.14 kg/hr × 6 hr = 0.84 kg. Carried: 1.26 kg (33% reserve). Emergency reserve: 0.42 kg. Battery: 86% consumed. All nominal for planned EVA.</div>
+        </div>
+        <div class="data-card data-card-mcs">
+          <div class="data-title">EVA Window Analysis</div>
+          <div class="data-source">MCS + MEDA thermal data</div>
+          <div class="data-val" id="tl-window">09:00–15:00 LMST</div>
+          <div class="data-desc">Optimal window: temperature above −70°C, wind below 18 m/s, solar power above 85% nominal. Dust devil activity low before 11:00 LMST. Schedule high-priority stops in first 3 hours.</div>
+        </div>
+        <div class="data-card data-card-crism">
+          <div class="data-title">Science Time Allocation</div>
+          <div class="data-source">Instrument time budget</div>
+          <div class="data-val" id="tl-sci">156 min science</div>
+          <div class="data-desc">SHERLOC Raman: 48 min · PIXL XRF: 60 min · Drill sampling: 48 min · Total planned science: 156 min out of 360 min EVA. Traverse/logistics: 204 min.</div>
+        </div>
+        <div class="data-card data-card-hirise">
+          <div class="data-title">Route Distance Summary</div>
+          <div class="data-source">HiRISE + MOLA derived</div>
+          <div class="data-val" id="tl-dist">4.5 km total</div>
+          <div class="data-desc">Outbound 2.8 km to deepest science target. Return 1.7 km (modified route avoids soft regolith). Average walking speed: 0.8 km/hr in EVA suit on Martian terrain.</div>
+        </div>
+      </div>
+      <div class="ai-output" style="margin-top:14px;" id="timelineAIOutput">
+        <div class="ai-output-title">📅 EVA TIMELINE ANALYSIS <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="timelineAIText">Click "Plan Marswalk" to generate an AI-optimised EVA timeline with phase scheduling, go/no-go windows, and resource consumption projections.</div>
+      </div>
+    </div>
+
+    <!-- ══════ MISSION BRIEF ══════ -->
+    <div id="tab-brief" class="content tab-panel">
+      <div class="section-heading">Formal EVA Mission Brief</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:5px;padding:20px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:18px;font-weight:700;color:var(--text);">EVA OPERATIONS ORDER</div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:3px;" id="brief-site-header">JEZERO CRATER · MARS SURFACE OPERATIONS</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span style="background:var(--mars-red);color:#fff;font-size:9px;padding:4px 10px;border-radius:2px;font-weight:700;">NASA APPROVED FORMAT</span>
+            <span style="background:var(--ibm);color:#fff;font-size:9px;padding:4px 10px;border-radius:2px;font-weight:700;">AI GENERATED</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;" id="brief-metadata">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px;">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Mission Sol</div>
+            <div style="font-size:14px;font-weight:700;color:var(--accent);" id="brief-sol">—</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px;">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">EVA Duration</div>
+            <div style="font-size:14px;font-weight:700;color:var(--accent);" id="brief-duration">6 hours</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px;">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Status</div>
+            <div style="font-size:14px;font-weight:700;color:var(--success);" id="brief-status">DRAFT</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="brief-sections">
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid var(--mars-red);">
+            <div style="font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">1. MISSION OVERVIEW</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;" id="brief-overview">Generate a Marswalk plan to populate this section with AI-authored mission overview, objectives, and success criteria.</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid var(--accent2);">
+            <div style="font-size:9px;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">2. SCIENCE OBJECTIVES</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;" id="brief-science">Integrated NASA multi-mission data (CRISM, MOLA, HiRISE, Perseverance) will populate priority science targets, instrument plan, and sample strategy.</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid var(--danger);">
+            <div style="font-size:9px;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">3. HAZARD SUMMARY</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;" id="brief-hazards">Click "Assess Hazards" to populate with radiation, terrain, atmospheric, and chemical hazard assessments from NASA data.</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid var(--ice);">
+            <div style="font-size:9px;color:var(--ice);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">4. WEATHER &amp; GO/NO-GO</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;" id="brief-weather">MCS atmospheric data, dust storm forecast, and EVA weather window will populate here after generating weather report.</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid #3b82f6;">
+            <div style="font-size:9px;color:#3b82f6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">5. NASA DATA SOURCES</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;">MOLA v5 · CRISM TRDR · THEMIS TES · HiRISE ESP · MCS v5.3 · Perseverance MEDA/RIMFAX · Curiosity REMS · InSight HP³ · Phoenix MECA · NOAA SWPC space weather</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:4px;padding:12px;border-top:2px solid var(--success);">
+            <div style="font-size:9px;color:var(--success);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">6. EMERGENCY PROCEDURES</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.7;">SPE alert → abort immediately, shelter in habitat (3 min). Suit failure → EVA partner assist, immediate return. Visibility < 50m → halt, shelter in place, await Mission Control go-ahead. Comms loss → return to base camp per pre-planned abort route.</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <button class="btn btn-mars" style="width:auto;padding:9px 18px;" onclick="generateFullBrief()">📋 Generate Full Mission Brief</button>
+        <button class="btn btn-outline" style="width:auto;padding:9px 18px;" onclick="exportBrief()">💾 Export Brief</button>
+      </div>
+      <div class="ai-output" id="briefAIOutput">
+        <div class="ai-output-title">📋 MISSION BRIEF <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="briefAIText">Click "Generate Full Mission Brief" to produce a formal, submission-ready EVA operations order integrating all NASA data layers — suitable for mission planning review boards.</div>
+      </div>
+    </div>
+
     <!-- ══════ CHAT ══════ -->
     <div id="tab-chat" class="content tab-panel" style="height:100%;display:none;flex-direction:column;">
       <div class="chat-container">
@@ -1081,6 +1190,7 @@ function showTab(name) {
   if (name === 'chat') panel.style.display = 'flex';
   event.currentTarget.classList.add('active');
   if (name === 'terrain') renderTerrainProfile();
+  if (name === 'timeline') renderGanttChart();
 }
 function showTab_direct(name) {
   document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
@@ -1088,10 +1198,11 @@ function showTab_direct(name) {
   const panel = document.getElementById('tab-' + name);
   panel.classList.add('active');
   if (name === 'chat') panel.style.display = 'flex';
-  const tabs = ['map','marswalk','data','weather','terrain','science','hazards','chat'];
+  const tabs = ['map','marswalk','data','weather','terrain','science','hazards','timeline','brief','chat'];
   const idx = tabs.indexOf(name);
   if (idx >= 0) document.querySelectorAll('.tab')[idx].classList.add('active');
   if (name === 'terrain') renderTerrainProfile();
+  if (name === 'timeline') renderGanttChart();
 }
 
 // ── Map tool ──
@@ -1905,10 +2016,179 @@ async function typeText(el, text, speed = 12) {
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ══════════════════════════════════════════════════════
+//   Gantt Chart renderer — EVA Timeline
+// ══════════════════════════════════════════════════════
+function renderGanttChart() {
+  const site = SITES[currentSite] || SITES.jezero;
+  const duration = parseInt(document.getElementById('walkDuration')?.value || 6);
+  const phases = [
+    { label: 'Egress & Calibration', start: 0,   dur: 45,  color: '#22c55e',  desc: 'Airlock, suit check, WP-1 survey' },
+    { label: 'Traverse to Sci Zone', start: 45,  dur: 75,  color: '#3b82f6',  desc: 'WP-2 → WP-3, boulder detour' },
+    { label: 'Primary Science',      start: 120, dur: 120, color: '#e8642a',  desc: 'SHERLOC, PIXL, drill cores at WP-4' },
+    { label: 'Midpoint Rest',        start: 240, dur: 20,  color: '#f59e0b',  desc: 'Suit telemetry, nutrition, GO/NO-GO' },
+    { label: 'Secondary Science',    start: 260, dur: 60,  color: '#a855f7',  desc: 'WP-6 olivine, WP-8 sample cache' },
+    { label: 'Return Traverse',      start: 320, dur: 30,  color: '#0ea5e9',  desc: 'Avoid soft regolith, direct route' },
+    { label: 'Ingress & Decon',      start: 350, dur: 10,  color: '#22c55e',  desc: 'Airlock entry, perchlorate decon' }
+  ];
+  const totalMin = duration * 60;
+  const W = 680, H = phases.length * 34 + 50;
+  const xScale = (W - 120) / totalMin;
+
+  // Time markers (every 30 min = LMST)
+  let timeMarkers = '';
+  for (let m = 0; m <= totalMin; m += 30) {
+    const x = 110 + m * xScale;
+    const lmst = `${String(9 + Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    timeMarkers += `<text x="${x}" y="18" fill="#a08060" font-size="8" font-family="monospace" text-anchor="middle">${lmst}</text>`;
+    timeMarkers += `<line x1="${x}" y1="22" x2="${x}" y2="${H - 10}" stroke="#3d2e20" stroke-width="0.5" stroke-dasharray="2 3"/>`;
+  }
+
+  // Phase bars
+  let bars = '';
+  phases.forEach((p, i) => {
+    const y = 28 + i * 34;
+    const x = 110 + p.start * xScale;
+    const w = Math.max(p.dur * xScale, 4);
+    bars += `<rect x="${x}" y="${y}" width="${w}" height="24" rx="3" fill="${p.color}" opacity="0.85"/>`;
+    bars += `<text x="${x + w/2}" y="${y + 15}" fill="#fff" font-size="8" font-family="monospace" text-anchor="middle" font-weight="700">${p.dur}m</text>`;
+    bars += `<text x="4" y="${y + 15}" fill="#a08060" font-size="8.5" font-family="monospace">${p.label}</text>`;
+  });
+
+  // EVA window overlay
+  const windowStart = 0 * xScale + 110;
+  const windowEnd = Math.min(270 * xScale + 110, W);
+  const windowW = windowEnd - windowStart;
+
+  const svg = `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;background:#1e1610;border-radius:4px;min-width:500px;">
+    <rect width="${W}" height="${H}" fill="#1e1610" rx="4"/>
+    <rect x="110" y="22" width="${windowW}" height="${H - 32}" fill="rgba(34,197,94,0.04)" rx="2"/>
+    ${timeMarkers}
+    ${bars}
+    <text x="4" y="${H - 4}" fill="#475569" font-size="8" font-family="monospace">LMST · ${site.name.toUpperCase()} · EVA START 09:00</text>
+    <text x="${W - 4}" y="${H - 4}" fill="#475569" font-size="8" font-family="monospace" text-anchor="end">TOTAL: ${totalMin} MIN</text>
+  </svg>`;
+  document.getElementById('ganttChart').innerHTML = svg;
+}
+
+// ══════════════════════════════════════════════════════
+//   Mission Brief Generator
+// ══════════════════════════════════════════════════════
+async function generateFullBrief() {
+  const site = SITES[document.getElementById('landingSite').value] || SITES.jezero;
+  const duration = document.getElementById('walkDuration').value;
+  const evaSize = document.getElementById('evaSize').value;
+  const objective = document.getElementById('objective').value;
+
+  // Update static brief fields
+  document.getElementById('brief-site-header').textContent = `${site.name.toUpperCase()} · MARS SURFACE OPERATIONS`;
+  document.getElementById('brief-sol').textContent = `Sol ~${currentSol + 5}`;
+  document.getElementById('brief-duration').textContent = `${duration} hours`;
+  document.getElementById('brief-status').textContent = 'AI GENERATED';
+
+  document.getElementById('brief-overview').textContent = `EVA-1 at ${site.name}. Primary objective: ${objective}. ${site.description}. Crew: ${evaSize} suited astronauts. Duration: ${duration} hours. Site coordinates: ${site.lat}, ${site.lon} at ${site.elev} MOLA elevation. This EVA will be the first human contact with Martian surface science targets selected from 20 years of orbital and rover data.`;
+
+  document.getElementById('brief-science').textContent = `Priority 1: Delta Front Scarp (CRISM Mg-carbonate signal — biosignature target). Priority 1: Lacustrine sediments (fine-grained, highest organic preservation). Priority 2: Olivine outcrop (unweathered, rapid burial indicator). Priority 2: Perseverance sample tube depot (10 cached tubes). Mineralogy: ${site.crismVal}. Instrument suite: SHERLOC Raman, PIXL XRF, drill coring, context imaging.`;
+
+  document.getElementById('brief-hazards').textContent = `Terrain: HiRISE boulder field WP-3→WP-4 (detour +180m). THEMIS soft regolith WP-7 (AVOID — low TI zone). Max slope: ${site.terrainSlope}. Radiation: GCR 0.24 mSv/hr, SPE abort threshold 10 mSv/hr. Chemical: 0.5 wt% perchlorate — full decon protocol required. Trafficability: ${site.terrainTraffic}.`;
+
+  document.getElementById('brief-weather').textContent = `Temp: ${site.wTemp}. Wind: ${site.wWind} (abort >25 m/s). Dust: ${site.wDust} (abort τ>3.0). Pressure: ${site.wPressure}. Solar: ${site.wSolar}. EVA window: 09:00–15:00 LMST. Current GO/NO-GO: ✅ GO — all parameters nominal.`;
+
+  // AI full brief
+  setStatus('Generating mission brief…', true);
+  const el = document.getElementById('briefAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(2200);
+      text = `FORMAL EVA OPERATIONS ORDER
+${'═'.repeat(52)}
+Classification: OPERATIONAL  |  Version: 1.0 DRAFT
+Mission: MARS SURFACE EVA-1 · ${site.name.toUpperCase()}
+Sol: ${currentSol + 5}  |  Duration: ${duration}h  |  Crew: ${evaSize}  |  Objective: ${objective.toUpperCase()}
+
+SECTION 1 — SITUATION
+The first human Marswalk at ${site.name} represents the culmination of 20+ years of robotic reconnaissance. NASA mission data layers (MOLA, CRISM, THEMIS, HiRISE, MCS, Perseverance, Curiosity, InSight, Phoenix) have been integrated to define the optimal EVA route, minimise risk, and maximise science return. ${site.description}.
+
+Key facts: Elevation ${site.elev} (MOLA). Coordinates: ${site.lat}, ${site.lon}. Surface regolith: ${site.terrainRegolith}. Traversability: ${site.terrainTraffic}.
+
+SECTION 2 — MISSION OBJECTIVES
+PRIMARY: ${objective} at highest-value targets identified by orbital spectroscopy (CRISM ${site.crismVal}).
+SUCCESS CRITERIA:
+✓ Minimum 3 drill cores collected from Priority-1 targets
+✓ SHERLOC Raman scan at each primary science waypoint
+✓ PIXL XRF elemental map at Delta Front Scarp
+✓ Perseverance sample tube depot confirmed/retrieved (WP-8)
+✓ Safe return of all crew before EVA time limit
+
+SECTION 3 — EXECUTION (ROUTE)
+Phase 1 (0:00–0:45): Egress, calibration, WP-1 regolith survey
+Phase 2 (0:45–2:00): Traverse to science zone; boulder field detour active (HiRISE ESP flag)
+Phase 3 (2:00–4:00): Primary science at Delta Front Scarp (WP-4) — HIGHEST PRIORITY
+Phase 4 (4:00–6:00): Secondary science, sample cache retrieval, return traverse
+Total route: 4.5 km | Max slope: ${site.terrainSlope} | Hazard detours: 2 active
+
+SECTION 4 — ADMIN & LOGISTICS
+O2 supply: ${(parseFloat(duration) * 0.14 * parseInt(evaSize)).toFixed(1)} kg per person + 33% reserve
+Battery: 100% start → ~86% at EVA end (NOMINAL)
+Sample capacity: 800g maximum (6 drill cores + 3 rover tubes)
+Communication: UHF primary, S-band/DSN backup, emergency beacon
+Contingency shelter: Base Camp 200m SW — 3 min abort return
+
+SECTION 5 — COMMAND & SIGNAL
+EVA Commander: Mission Control — Houston/MCSA
+Field lead: Senior EVA astronaut (EVA-1)
+Go/No-Go authority: Flight Director
+Comm protocol: Check-in every 30 minutes; emergency protocol per EVA-ABORT-001
+
+SECTION 6 — NASA DATA INTEGRATION SUMMARY
+MOLA: ${site.molaVal} | CRISM: ${site.crismVal}
+THEMIS TI: ${site.themisVal} | HiRISE: ${site.hiriseVal}
+MCS: ${site.mcsVal} | Perseverance: ${site.persevVal}
+Weather GO/NO-GO: Dust ${site.wDust} ✅ | Wind ${site.wWind} ✅ | SPE: QUIET ✅
+
+Generated by MarswalkAI × IBM watsonx Granite
+NASA Space Apps Challenge 2024 — Advance Space Exploration with AI`;
+    } else {
+      const prompt = `Write a formal NASA-style EVA Operations Order for a ${duration}-hour Marswalk at ${site.name} (${site.lat}, ${site.lon}, elevation ${site.elev}). Objective: ${objective}. Crew: ${evaSize}. Integrate all NASA data: MOLA elevation (${site.molaVal}), CRISM mineralogy (${site.crismVal}), THEMIS thermal inertia (${site.themisVal}), HiRISE terrain (${site.hiriseVal}), MCS weather (${site.mcsVal}), ${site.persevVal}. Format as formal operations order with Situation, Mission, Execution, Admin/Logistics, Command sections.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 6);
+    document.getElementById('brief-status').textContent = 'COMPLETE';
+    setStatus('Mission brief complete · All NASA data integrated', false);
+    showNotification('Mission brief generated! See the Mission Brief tab.');
+  } catch (e) {
+    el.className = 'ai-text';
+    el.textContent = '⚠ Error: ' + e.message;
+    setStatus('Error', false);
+  }
+}
+
+function exportBrief() {
+  const content = document.getElementById('briefAIText').textContent || '';
+  const site = SITES[currentSite]?.name || 'Mars';
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `EVA-Mission-Brief-${site.replace(/\s+/g,'-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════════════
+//   Enhanced generateMarswalkPlan — also updates brief
+// ══════════════════════════════════════════════════════
+const _origGenerateMarswalkPlan = generateMarswalkPlan;
+
 // ── Init ──
 updateSite();
 renderTerrainProfile();
 renderForecast();
+renderGanttChart();
 </script>
 </body>
 </html>
