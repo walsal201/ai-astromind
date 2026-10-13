@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AstroMind MarswalkAI — NASA Mars Surface Explorer</title>
+<meta name="description" content="Layered Mars surface map integrating NASA mission data for human Marswalk planning. Built with IBM Bob & IBM watsonx.">
+<style>
+  :root {
+    --bg: #0c0a08;
+    --surface: #14100c;
+    --card: #1e1610;
+    --border: #3d2e20;
+    --accent: #e8642a;
+    --accent2: #c9a227;
+    --ice: #7ec8d8;
+    --success: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #f0e6d6;
+    --muted: #a08060;
+    --ibm: #0f62fe;
+    --mars-red: #c1440e;
+    --mars-dark: #7a2a08;
+    --dust: #d4956a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0c0a08 0%, #1e1008 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-text { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: 1px; }
+  .logo-sub { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .badge-ibm { background: var(--ibm); color: #fff; font-size: 9px; padding: 2px 8px; border-radius: 2px; font-weight: 700; letter-spacing: 1px; }
+  .badge-nasa { background: #0b3d91; color: #fff; font-size: 9px; padding: 2px 8px; border-radius: 2px; font-weight: 700; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  /* ── Layout ── */
+  .app-layout { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 58px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .panel-title {
+    font-size: 9px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+  label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+  select, input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 9px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    margin-bottom: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .btn {
+    width: 100%;
+    padding: 9px;
+    border: none;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    transition: opacity 0.2s, transform 0.1s;
+    margin-bottom: 6px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-mars { background: var(--mars-red); color: #fff; }
+  .btn-mars:hover { opacity: 0.88; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: #fff; }
+  .btn-ibm { background: var(--ibm); color: #fff; }
+  .btn-ibm:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── Main ── */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 13px 16px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Content ── */
+  .content { flex: 1; overflow-y: auto; padding: 18px 20px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Section heading ── */
+  .section-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin-left: 8px;
+  }
+
+  /* ── Mars Surface Map ── */
+  .map-wrapper {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .map-canvas {
+    display: block;
+    width: 100%;
+    cursor: crosshair;
+  }
+  .map-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .map-btn {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: background 0.15s;
+  }
+  .map-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .map-btn:hover:not(.active) { background: var(--border); }
+
+  .layer-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: #0c0a08;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-value { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+
+  /* ── AI Output ── */
+  .ai-output {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+    margin-top: 14px;
+    min-height: 140px;
+    position: relative;
+  }
+  .ai-output-title {
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ai-text { color: var(--text); line-height: 1.8; white-space: pre-wrap; font-size: 12px; }
+  .ai-placeholder { color: var(--muted); font-style: italic; font-size: 11px; }
+  .typing-cursor::after { content: '█'; animation: blink 0.8s step-end infinite; color: var(--accent); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Data layer cards ── */
+  .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .data-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 14px;
+    border-top: 3px solid;
+  }
+  .data-card-mola { border-top-color: #c84b0e; }
+  .data-card-crism { border-top-color: #2ecc71; }
+  .data-card-themis { border-top-color: #e67e22; }
+  .data-card-mcs { border-top-color: #3498db; }
+  .data-card-hirise { border-top-color: #9b59b6; }
+  .data-card-perseverance { border-top-color: #e8c42a; }
+  .data-title { font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+  .data-source { font-size: 9px; color: var(--muted); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .data-val { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .data-desc { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+  /* ── Route waypoints ── */
+  .route-list { display: flex; flex-direction: column; gap: 0; margin-top: 14px; }
+  .route-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-left: 2px solid var(--border);
+    padding-left: 16px;
+    position: relative;
+  }
+  .route-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .route-item.hazard::before { background: var(--danger); }
+  .route-item.poi::before { background: var(--accent2); }
+  .wp-num { font-size: 10px; color: var(--muted); min-width: 50px; }
+  .wp-content { flex: 1; }
+  .wp-name { font-size: 12px; font-weight: 700; }
+  .wp-detail { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .wp-badges { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+  .wp-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+  }
+  .badge-geo { background: #3d2a0a; color: var(--accent2); }
+  .badge-hazard { background: #3d0a0a; color: #fca5a5; }
+  .badge-science { background: #0a2a3d; color: #7dd3fc; }
+  .badge-shelter { background: #0a3d1a; color: #86efac; }
+  .badge-sample { background: #2a0a3d; color: #c4b5fd; }
+
+  /* ── Hazard alerts ── */
+  .hazard-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .hazard-alert {
+    background: var(--card);
+    border-radius: 5px;
+    padding: 12px 14px;
+    border-left: 3px solid;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .ha-critical { border-color: var(--danger); }
+  .ha-warning { border-color: var(--warn); }
+  .ha-info { border-color: var(--ice); }
+  .ha-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .ha-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .ha-desc { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .ha-source { font-size: 9px; color: var(--accent); margin-top: 5px; letter-spacing: 0.5px; }
+
+  /* ── Weather panel ── */
+  .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .weather-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 14px;
+    text-align: center;
+  }
+  .weather-icon { font-size: 28px; margin-bottom: 6px; }
+  .weather-val { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .weather-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+  .weather-note { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+  .forecast-bar { 
+    display: flex; gap: 6px; margin-top: 14px; overflow-x: auto; padding-bottom: 6px;
+  }
+  .forecast-day {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px 12px;
+    text-align: center;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .forecast-sol { font-size: 9px; color: var(--muted); }
+  .forecast-icon { font-size: 18px; margin: 4px 0; }
+  .forecast-temp { font-size: 11px; font-weight: 700; color: var(--text); }
+  .forecast-dust { font-size: 9px; color: var(--dust); margin-top: 3px; }
+
+  /* ── Terrain profile ── */
+  .terrain-svg-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+
+  /* ── Science targets ── */
+  .sci-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .sci-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 13px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .sci-priority {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .prio-1 { background: var(--mars-red); color: #fff; }
+  .prio-2 { background: var(--accent2); color: #111; }
+  .prio-3 { background: #1e3a5f; color: var(--ice); }
+  .sci-body { flex: 1; }
+  .sci-name { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .sci-coord { font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+  .sci-desc { font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .sci-instruments { font-size: 10px; color: var(--accent2); margin-top: 5px; }
+
+  /* ── Chat ── */
+  .chat-container { display: flex; flex-direction: column; height: 100%; }
+  .chat-history { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; gap: 10px; }
+  .chat-msg { display: flex; gap: 8px; max-width: 92%; }
+  .chat-msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .chat-msg.ai { align-self: flex-start; }
+  .msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .avatar-ai { background: var(--mars-red); }
+  .avatar-user { background: #1e3a5f; }
+  .msg-bubble { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 9px 13px; font-size: 12px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+  .msg-bubble.user { background: #1a2040; border-color: #2a4080; }
+  .chat-input-row { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .chat-input-row input { margin: 0; flex: 1; }
+  .chat-send-btn { background: var(--mars-red); color: #fff; border: none; border-radius: 3px; padding: 8px 14px; font-family: inherit; font-size: 11px; cursor: pointer; font-weight: 700; }
+  .chat-send-btn:hover { opacity: 0.88; }
+  .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Status bar ── */
+  .status-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 5px 20px;
+    font-size: 9px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--success); display: inline-block; }
+  .status-dot.loading { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── API section ── */
+  .api-hint { font-size: 9px; color: var(--muted); margin-top: -4px; margin-bottom: 8px; line-height: 1.5; }
+
+  /* ── Progress bar ── */
+  .progress-wrap { background: var(--border); border-radius: 2px; height: 4px; overflow: hidden; margin: 4px 0 10px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .data-grid { grid-template-columns: 1fr; }
+    .weather-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span style="font-size:22px;">🔴</span>
+    <div>
+      <div class="logo-text">MARSWALK<span style="color:var(--accent);">AI</span></div>
+      <div class="logo-sub">NASA Mars Surface Explorer · IBM watsonx</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-nasa">NASA DATA</span>
+    <span class="badge-ibm">IBM WATSONX</span>
+    <a href="index.html" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">← HOME</a>
+    <a href="prototype.html" style="color:var(--muted);font-size:10px;text-decoration:none;letter-spacing:1px;">ASTROMIND</a>
+  </div>
+</header>
+
+<div class="app-layout">
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside class="sidebar">
+
+    <!-- API Config -->
+    <div>
+      <div class="panel-title">⚙ IBM watsonx Config</div>
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="Enter watsonx API key…">
+      <label>Project ID</label>
+      <input type="text" id="projectId" placeholder="Enter project ID…">
+      <div class="api-hint">🔒 Credentials stay in your browser only</div>
+      <button class="btn btn-ibm" onclick="enableDemoMode()">▶ Run in Demo Mode</button>
+    </div>
+
+    <!-- Location -->
+    <div>
+      <div class="panel-title">📍 Landing Region</div>
+      <label>Primary Site</label>
+      <select id="landingSite" onchange="updateSite()">
+        <option value="jezero">Jezero Crater (Perseverance)</option>
+        <option value="gale">Gale Crater (Curiosity)</option>
+        <option value="hellas">Hellas Planitia Basin</option>
+        <option value="valles">Valles Marineris</option>
+        <option value="arcadia">Arcadia Planitia</option>
+        <option value="elysium">Elysium Planitia (InSight)</option>
+      </select>
+      <label>Marswalk Duration (hours)</label>
+      <input type="number" id="walkDuration" value="6" min="1" max="12">
+      <label>Crew EVA Size</label>
+      <select id="evaSize">
+        <option value="2">2-person EVA team</option>
+        <option value="3">3-person EVA team</option>
+        <option value="1">Solo EVA (emergency only)</option>
+      </select>
+      <label>Primary Objective</label>
+      <select id="objective">
+        <option value="geology">Geological Survey</option>
+        <option value="astrobiology">Astrobiology Hunt</option>
+        <option value="isru">ISRU Site Assessment</option>
+        <option value="cache">Sample Cache Retrieval</option>
+        <option value="repair">Equipment Repair</option>
+      </select>
+    </div>
+
+    <!-- Data Layers -->
+    <div>
+      <div class="panel-title">🗂 Data Layers (Toggle)</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerMOLA" checked onchange="renderMap()"> <span style="color:var(--text);">MOLA Topography</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerCRISM" checked onchange="renderMap()"> <span style="color:var(--text);">CRISM Mineralogy</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerTHEMIS" onchange="renderMap()"> <span style="color:var(--text);">THEMIS Thermal</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerHiRISE" checked onchange="renderMap()"> <span style="color:var(--text);">HiRISE Terrain</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerRoute" checked onchange="renderMap()"> <span style="color:var(--text);">Planned Route</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerHazard" checked onchange="renderMap()"> <span style="color:var(--text);">Hazard Zones</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerSci" checked onchange="renderMap()"> <span style="color:var(--text);">Science Targets</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="layerWeather" onchange="renderMap()"> <span style="color:var(--text);">Wind / Dust</span></label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div>
+      <div class="panel-title">🤖 AI Marswalk Tools</div>
+      <button class="btn btn-mars" onclick="generateMarswalkPlan()">🚶 Plan Marswalk</button>
+      <button class="btn btn-outline" onclick="analyzeHazards()">⚠ Assess Hazards</button>
+      <button class="btn btn-outline" onclick="generateScienceBrief()">🔬 Science Brief</button>
+      <button class="btn btn-outline" onclick="generateWeatherBrief()">🌪 Weather Report</button>
+      <button class="btn btn-outline" onclick="generateEVAChecklist()">✅ EVA Checklist</button>
+      <button class="btn btn-ibm" onclick="showTab_direct('chat')">💬 Ask MarswalkAI</button>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('map')">🗺 Surface Map</div>
+      <div class="tab" onclick="showTab('marswalk')">🚶 Marswalk Plan</div>
+      <div class="tab" onclick="showTab('data')">📡 NASA Data Layers</div>
+      <div class="tab" onclick="showTab('weather')">🌪 Mars Weather</div>
+      <div class="tab" onclick="showTab('terrain')">⛰ Terrain Profile</div>
+      <div class="tab" onclick="showTab('science')">🔬 Science Targets</div>
+      <div class="tab" onclick="showTab('hazards')">⚠ Hazard Map</div>
+      <div class="tab" onclick="showTab('chat')">💬 AI Chat</div>
+    </div>
+
+    <!-- ══════ MAP ══════ -->
+    <div id="tab-map" class="content tab-panel active">
+      <div class="section-heading">Mars Surface Map — <span id="siteName" style="color:var(--accent);">Jezero Crater</span></div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-lat">18.4°N</div>
+          <div class="stat-label">Latitude</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-lon">77.7°E</div>
+          <div class="stat-label">Longitude</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-elev">−2,900m</div>
+          <div class="stat-label">MOLA Elevation</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-temp">−63°C</div>
+          <div class="stat-label">Surface Temp</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-dust">Tau 0.5</div>
+          <div class="stat-label">Dust Opacity</div>
+        </div>
+      </div>
+
+      <div class="map-wrapper">
+        <canvas id="marsMapCanvas" class="map-canvas" width="780" height="420" onclick="onMapClick(event)"></canvas>
+        <div class="map-toolbar">
+          <button class="map-btn active" id="toolSelect" onclick="setTool('select')">Select</button>
+          <button class="map-btn" id="toolWaypoint" onclick="setTool('waypoint')">+ Waypoint</button>
+          <button class="map-btn" id="toolHazard" onclick="setTool('hazard')">+ Hazard</button>
+          <button class="map-btn" id="toolSci" onclick="setTool('sci')">+ Science</button>
+          <button class="map-btn" onclick="clearRoute()">Clear Route</button>
+          <button class="map-btn" onclick="renderMap()">Refresh Layers</button>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto;align-self:center;" id="mapCoords">Click map to add points</span>
+        </div>
+        <div class="layer-legend">
+          <div class="legend-item"><div class="legend-swatch" style="background:#c84b0e;"></div>MOLA Topo</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#2ecc71;"></div>Minerals (CRISM)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#e67e22;"></div>Thermal (THEMIS)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6;"></div>Route</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#ef4444;"></div>Hazards</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#f59e0b;"></div>Science Targets</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#a855f7;"></div>HiRISE Coverage</div>
+        </div>
+      </div>
+
+      <div class="ai-output" id="mapAIOutput">
+        <div class="ai-output-title">🔴 MARSWALK<span style="color:var(--accent);">AI</span> SITE OVERVIEW <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX</span></div>
+        <div class="ai-text ai-placeholder" id="mapAIText">Select a landing site and click "Plan Marswalk" to generate an AI-powered surface route optimised for science, safety, and EVA duration. Powered by IBM watsonx Granite with NASA mission data integration.</div>
+      </div>
+    </div>
+
+    <!-- ══════ MARSWALK PLAN ══════ -->
+    <div id="tab-marswalk" class="content tab-panel">
+      <div class="section-heading">Planned Marswalk Route</div>
+      <div class="route-list" id="routeList">
+        <div style="color:var(--muted);font-size:11px;font-style:italic;padding:12px 0;">Generate a marswalk plan to see the AI-optimised route with waypoints, science stops, and hazard avoidance.</div>
+      </div>
+      <div class="ai-output" id="marswalkAIOutput">
+        <div class="ai-output-title">🚶 MARSWALK ROUTE PLAN <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="marswalkAIText">Click "Plan Marswalk" in the sidebar to generate a detailed, AI-optimised route plan for your EVA.</div>
+      </div>
+    </div>
+
+    <!-- ══════ NASA DATA LAYERS ══════ -->
+    <div id="tab-data" class="content tab-panel">
+      <div class="section-heading">Integrated NASA Science Data</div>
+      <div class="data-grid" id="dataGrid">
+        <div class="data-card data-card-mola">
+          <div class="data-title">MOLA Topography</div>
+          <div class="data-source">Mars Orbiter Laser Altimeter · MGS</div>
+          <div class="data-val" id="mola-val">−2,900 m</div>
+          <div class="data-desc">Mars Global Surveyor MOLA provides 1/128° resolution elevation data. Jezero Crater floor shows a ~50m deep lacustrine basin ideal for ancient sediment sampling.</div>
+        </div>
+        <div class="data-card data-card-crism">
+          <div class="data-title">CRISM Mineralogy</div>
+          <div class="data-source">Compact Reconnaissance Imaging Spectrometer · MRO</div>
+          <div class="data-val" id="crism-val">Mg-carbonate detected</div>
+          <div class="data-desc">CRISM spectral data reveals magnesium carbonates and olivine-bearing units in the Jezero delta — prime biosignature preservation targets. Hydrated silica also detected.</div>
+        </div>
+        <div class="data-card data-card-themis">
+          <div class="data-title">THEMIS Thermal Inertia</div>
+          <div class="data-source">Thermal Emission Imaging System · Mars Odyssey</div>
+          <div class="data-val" id="themis-val">420 TIU</div>
+          <div class="data-desc">Thermal inertia 420 J m⁻² K⁻¹ s⁻⁰·⁵ indicates compact, possibly cemented regolith. EVA traversability is GOOD. Avoid low-TI zones (dusty regolith, potential trafficability hazard).</div>
+        </div>
+        <div class="data-card data-card-mcs">
+          <div class="data-title">MCS Atmospheric Profile</div>
+          <div class="data-source">Mars Climate Sounder · MRO</div>
+          <div class="data-val" id="mcs-val">700 Pa surface pressure</div>
+          <div class="data-desc">Current atmospheric pressure 700 Pa (0.7% Earth sea level). Dust optical depth τ = 0.5 (clear). Temperature inversion detected 20 km altitude. EVA weather: GO.</div>
+        </div>
+        <div class="data-card data-card-hirise">
+          <div class="data-title">HiRISE High-Res Imagery</div>
+          <div class="data-source">HiRISE Camera · MRO (25 cm/px)</div>
+          <div class="data-val" id="hirise-val">25 cm/px resolved</div>
+          <div class="data-desc">HiRISE 25 cm/pixel resolution reveals boulders >0.5m diameter along proposed route. Two boulder fields flagged as route diversions. Delta front scarp visible at WP-4.</div>
+        </div>
+        <div class="data-card data-card-perseverance">
+          <div class="data-title">Perseverance Ground Truth</div>
+          <div class="data-source">Mars 2020 Rover · Sol 1200 Data</div>
+          <div class="data-val" id="persev-val">1,200+ sol traverse</div>
+          <div class="data-desc">Perseverance rover Sol 1200 traverse data validates route terrain models. Regolith shear strength ~7 kPa. No significant sand traps detected in primary EVA zone. 24 sample tubes cached.</div>
+        </div>
+      </div>
+      <div class="ai-output" style="margin-top:14px;" id="dataAIOutput">
+        <div class="ai-output-title">📡 DATA INTEGRATION ANALYSIS <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="dataAIText">NASA multi-mission data displayed above. Click "Plan Marswalk" to generate an AI analysis integrating all layers for your specific EVA objectives.</div>
+      </div>
+    </div>
+
+    <!-- ══════ WEATHER ══════ -->
+    <div id="tab-weather" class="content tab-panel">
+      <div class="section-heading">Mars Weather — <span id="weatherSite" style="color:var(--accent);">Jezero Crater</span></div>
+      <div class="weather-grid">
+        <div class="weather-card">
+          <div class="weather-icon">🌡</div>
+          <div class="weather-val" id="w-temp">−63°C</div>
+          <div class="weather-label">Surface Temperature</div>
+          <div class="weather-note">Range: −80°C night / −20°C midday peak. EVA window: 09:00–15:00 LMST</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-icon">💨</div>
+          <div class="weather-val" id="w-wind">12 m/s</div>
+          <div class="weather-label">Wind Speed (surface)</div>
+          <div class="weather-note">Prevailing NW direction. Gusty in afternoon. EVA limit: 25 m/s. Current: SAFE</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-icon">🌪</div>
+          <div class="weather-val" id="w-dust">Tau 0.5</div>
+          <div class="weather-label">Dust Optical Depth</div>
+          <div class="weather-note">Clear conditions (τ &lt; 1.0). Seasonal dust storm probability 18%. Solar power: 92% nominal</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-icon">⚡</div>
+          <div class="weather-val" id="w-pressure">700 Pa</div>
+          <div class="weather-label">Atmospheric Pressure</div>
+          <div class="weather-note">0.7% Earth sea level. Suit design minimum 41 kPa internal. All EVA systems: NOMINAL</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-icon">☀</div>
+          <div class="weather-val" id="w-solar">590 W/m²</div>
+          <div class="weather-label">Solar Irradiance</div>
+          <div class="weather-note">43% of Earth equivalent at 1.52 AU. UV Index: EXTREME — suit UV protection required</div>
+        </div>
+        <div class="weather-card">
+          <div class="weather-icon">🌀</div>
+          <div class="weather-val" id="w-devils">3 detected</div>
+          <div class="weather-label">Dust Devils (today)</div>
+          <div class="weather-note">3 dust devils detected in 20 km radius. Diameter est. 50–120 m. Avoid dust devil tracks</div>
+        </div>
+      </div>
+      <div class="section-heading" style="margin-top:20px;">10-Sol Forecast</div>
+      <div class="forecast-bar" id="forecastBar"></div>
+      <div class="ai-output" style="margin-top:14px;" id="weatherAIOutput">
+        <div class="ai-output-title">🌪 WEATHER ANALYSIS <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">MCS + WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="weatherAIText">Click "Weather Report" to generate an AI-powered EVA weather assessment based on Mars Climate Sounder data and seasonal dust storm models.</div>
+      </div>
+    </div>
+
+    <!-- ══════ TERRAIN ══════ -->
+    <div id="tab-terrain" class="content tab-panel">
+      <div class="section-heading">Terrain Elevation Profile (MOLA)</div>
+      <div class="terrain-svg-wrap">
+        <svg id="terrainSVG" width="740" height="220" viewBox="0 0 740 220" style="display:block;width:100%;"></svg>
+      </div>
+      <div class="data-grid" style="margin-top:14px;">
+        <div class="data-card data-card-mola">
+          <div class="data-title">Route Max Slope</div>
+          <div class="data-source">MOLA + HiRISE derived</div>
+          <div class="data-val" id="terrain-slope">11.3°</div>
+          <div class="data-desc">Maximum slope along planned route. EVA suit mobility limit: 20°. Recommended limit for safety: 15°. Current route: WITHIN LIMITS.</div>
+        </div>
+        <div class="data-card data-card-hirise">
+          <div class="data-title">Elevation Change</div>
+          <div class="data-source">HiRISE DTM · 1m resolution</div>
+          <div class="data-val" id="terrain-elev-change">+42m / −18m</div>
+          <div class="data-desc">Total ascent 42m, descent 18m along 3.2 km route. Energy expenditure estimate: 420 kCal additional above baseline for suited astronaut.</div>
+        </div>
+        <div class="data-card data-card-perseverance">
+          <div class="data-title">Surface Trafficability</div>
+          <div class="data-source">Perseverance RIMFAX + terrain data</div>
+          <div class="data-val" id="terrain-traffic">GOOD</div>
+          <div class="data-desc">RIMFAX ground-penetrating radar shows competent bedrock within 50 cm along primary route. No subsurface voids detected. Regolith: compact.</div>
+        </div>
+        <div class="data-card data-card-crism">
+          <div class="data-title">Regolith Composition</div>
+          <div class="data-source">CRISM + APXS Heritage Data</div>
+          <div class="data-val" id="terrain-regolith">Basaltic + Mg-Carb</div>
+          <div class="data-desc">Primary basaltic regolith with Mg-carbonate patches at delta margin. Olivine-rich units near WP-4. Perchlorate concentration: 0.5% (standard Mars surface — suit contamination protocol required).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SCIENCE ══════ -->
+    <div id="tab-science" class="content tab-panel">
+      <div class="section-heading">Science Targets Along Route</div>
+      <div class="sci-list" id="sciList">
+        <div class="sci-item">
+          <div class="sci-priority prio-1">P1</div>
+          <div class="sci-body">
+            <div class="sci-name">Jezero Delta Front Scarp</div>
+            <div class="sci-coord">18.4847°N, 77.5840°E · WP-4 · Distance: 2.1 km</div>
+            <div class="sci-desc">The most compelling biosignature preservation target on Mars. CRISM detects Mg-carbonates and hydrated silica — identical to environments where early Earth life was preserved. Priority 1 sample collection.</div>
+            <div class="sci-instruments">Instruments: SHERLOC (Raman), PIXL (XRF), drill sampling, hand lens imaging</div>
+          </div>
+        </div>
+        <div class="sci-item">
+          <div class="sci-priority prio-1">P1</div>
+          <div class="sci-body">
+            <div class="sci-name">Olivine-bearing Bedrock Outcrop</div>
+            <div class="sci-coord">18.4720°N, 77.5910°E · WP-6 · Distance: 2.8 km</div>
+            <div class="sci-desc">Olivine-bearing units detected by CRISM. Unweathered olivine indicates rapid burial, preserving potential organic compounds. Key sample for establishing timeline of Mars water activity.</div>
+            <div class="sci-instruments">Instruments: SHERLOC, hand sample, field notebook, context imaging</div>
+          </div>
+        </div>
+        <div class="sci-item">
+          <div class="sci-priority prio-2">P2</div>
+          <div class="sci-body">
+            <div class="sci-name">Perseverance Sample Cache Site</div>
+            <div class="sci-coord">18.4651°N, 77.6103°E · WP-8 · Distance: 3.2 km</div>
+            <div class="sci-desc">Location of 10 sample tube depot cached by Perseverance rover. Tube retrieval enables Earth return of carefully curated samples. High mission return value — extends Perseverance science program.</div>
+            <div class="sci-instruments">Instruments: Sample tube retrieval, visual documentation, GPS survey</div>
+          </div>
+        </div>
+        <div class="sci-item">
+          <div class="sci-priority prio-2">P2</div>
+          <div class="sci-body">
+            <div class="sci-name">Lacustrine Sedimentary Unit</div>
+            <div class="sci-coord">18.4590°N, 77.5760°E · WP-3 · Distance: 1.5 km</div>
+            <div class="sci-desc">Fine-grained lacustrine sediments mapped by CRISM. These represent the deepest water-deposited layers — highest potential for preserved organics. Stratigraphic section measurement needed.</div>
+            <div class="sci-instruments">Instruments: Drill, PIXL, sediment texture analysis, stratigraphy logging</div>
+          </div>
+        </div>
+        <div class="sci-item">
+          <div class="sci-priority prio-3">P3</div>
+          <div class="sci-body">
+            <div class="sci-name">Dust Devil Track Survey</div>
+            <div class="sci-coord">18.4800°N, 77.6400°E · WP-10 · Distance: 4.0 km</div>
+            <div class="sci-desc">Active dust devil tracks expose fresh subsurface material. Opportunity to characterise unweathered regolith at depth. Also collects MEDA wind/dust data for future EVA planning models.</div>
+            <div class="sci-instruments">Instruments: Scoop sampling, MEDA calibration, soil mechanics test</div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-output" style="margin-top:14px;" id="sciAIOutput">
+        <div class="ai-output-title">🔬 SCIENCE BRIEF <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="sciAIText">Click "Science Brief" in the sidebar to generate an AI-powered science prioritisation and instrument recommendation for your EVA objectives.</div>
+      </div>
+    </div>
+
+    <!-- ══════ HAZARDS ══════ -->
+    <div id="tab-hazards" class="content tab-panel">
+      <div class="section-heading">Hazard Assessment</div>
+      <div class="hazard-list" id="hazardList">
+        <div class="hazard-alert ha-critical">
+          <div class="ha-icon">☢</div>
+          <div>
+            <div class="ha-title">Solar Radiation — SPE Alert</div>
+            <div class="ha-desc">Space weather forecast shows elevated solar energetic particle flux. During EVA, crew will receive ~0.8 mSv/hour surface dose (GCR + scattered radiation). Limit EVA duration if SPE event triggers (>10 mSv threshold). Storm shelter location: Base Camp (200m SW, 3 min return).</div>
+            <div class="ha-source">Source: NASA Space Weather · NOAA SWPC real-time data</div>
+          </div>
+        </div>
+        <div class="hazard-alert ha-warning">
+          <div class="ha-icon">🌪</div>
+          <div>
+            <div class="ha-title">Dust Devil Field — SE Quadrant</div>
+            <div class="ha-desc">HiRISE detects active dust devil tracks in SE portion of EVA zone. Dust devils at Jezero average 50–200m diameter, wind speeds 25–35 m/s. Route WP-9 → WP-10 passes through high-frequency zone. Recommend morning EVA scheduling (before 11:00 LMST) when convective activity is minimal.</div>
+            <div class="ha-source">Source: HiRISE seasonal monitoring · MEDA dust devil sensor data</div>
+          </div>
+        </div>
+        <div class="hazard-alert ha-warning">
+          <div class="ha-icon">🪨</div>
+          <div>
+            <div class="ha-title">Boulder Field — WP-3 to WP-4</div>
+            <div class="ha-desc">HiRISE 25 cm imagery reveals dense boulder field (>50 boulders/100m²) between WP-3 and WP-4. Boulders 0.5–2.0m diameter. Route detours 180m west to avoid. Original straight-line path slope of 14° also exceeds recommended limit. Alternate route adds 12 minutes to EVA schedule.</div>
+            <div class="ha-source">Source: HiRISE ESP_058795_1985 · Perseverance AutoNav terrain data</div>
+          </div>
+        </div>
+        <div class="hazard-alert ha-warning">
+          <div class="ha-icon">🕳</div>
+          <div>
+            <div class="ha-title">Soft Regolith Zone — WP-7</div>
+            <div class="ha-desc">THEMIS low thermal inertia anomaly at WP-7 coordinates indicates unconsolidated dust deposit estimated 30–60 cm depth. Risk of astronaut sinking / reduced mobility. RIMFAX data shows fine-grained particle accumulation in topographic low. Mark as AVOID and route around perimeter (+45m route addition).</div>
+            <div class="ha-source">Source: THEMIS TI anomaly map · RIMFAX subsurface radar (Sol 850–900)</div>
+          </div>
+        </div>
+        <div class="hazard-alert ha-info">
+          <div class="ha-icon">💜</div>
+          <div>
+            <div class="ha-title">Perchlorate Contamination Risk</div>
+            <div class="ha-desc">Mars surface perchlorates (average 0.5 wt%) detected across EVA zone by Phoenix lander heritage data. All sample handling requires contamination protocol. Do not allow regolith contact with bare skin or suit life-support inlet. Decontamination station required at airlock re-entry. Perchlorate is a health hazard at &gt;0.1 mg/kg body weight.</div>
+            <div class="ha-source">Source: Phoenix WCL instrument data · MECA chemistry analysis</div>
+          </div>
+        </div>
+        <div class="hazard-alert ha-info">
+          <div class="ha-icon">🧊</div>
+          <div>
+            <div class="ha-title">Thermal Stress — Suit Management</div>
+            <div class="ha-desc">Rapid temperature cycling: surface warms from −80°C dawn to −20°C midday peak, then rapid cooling. EVA suit thermal regulation load increases dramatically in afternoon. Schedule primary EVA 08:00–14:00 LMST. Avoid EVA at night (radiative cooling 100 W/m² from suit). Battery drain rate increases 23% below −50°C.</div>
+            <div class="ha-source">Source: REMS temperature data (Curiosity) · InSight HP3 thermal measurements</div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-output" style="margin-top:14px;" id="hazardAIOutput">
+        <div class="ai-output-title">⚠ HAZARD INTELLIGENCE <span style="background:var(--ibm);color:#fff;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:4px;">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="hazardAIText">Click "Assess Hazards" to generate a comprehensive AI hazard assessment integrating NASA surface and orbital data for your specific EVA route and conditions.</div>
+      </div>
+    </div>
+
+    <!-- ══════ CHAT ══════ -->
+    <div id="tab-chat" class="content tab-panel" style="height:100%;display:none;flex-direction:column;">
+      <div class="chat-container">
+        <div class="section-heading">MarswalkAI Mission Assistant</div>
+        <div class="chat-history" id="chatHistory">
+          <div class="chat-msg ai">
+            <div class="msg-avatar avatar-ai">🔴</div>
+            <div class="msg-bubble">Hello, Explorer. I'm MarswalkAI — your AI surface mission assistant powered by IBM watsonx and integrated with NASA Mars science data.
+
+I have real-time access to:
+• MOLA topography & elevation profiles
+• CRISM mineralogy maps (biosignature targets)
+• THEMIS thermal inertia (terrain trafficability)
+• HiRISE high-resolution imagery (25 cm/px)
+• MCS atmospheric profiles & dust monitoring
+• Perseverance / Curiosity rover ground truth
+• Mars space weather (SPE radiation alerts)
+
+Ask me about your EVA route, science targets, hazards, suit systems, or any aspect of your Marswalk. What do you need to know?</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Ask about your Marswalk…" onkeypress="if(event.key==='Enter')sendChat()">
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">▶ Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span><span class="status-dot" id="statusDot"></span> <span id="statusText">Ready · Demo Mode available</span></span>
+      <span id="solDisplay">Mars Sol: —</span>
+      <span>NASA Data: MOLA · CRISM · THEMIS · HiRISE · MCS · Perseverance</span>
+      <span>MarswalkAI v1.0 · IBM Bob Challenge 2024</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═════════════════════════════════════════════════════
+//   MarswalkAI — NASA Mars Surface Explorer
+//   Built with IBM Bob · Powered by IBM watsonx Granite
+//   NASA data layers: MOLA, CRISM, THEMIS, HiRISE, MCS
+// ═════════════════════════════════════════════════════
+
+let demoMode = false;
+let isLoading = false;
+let currentTool = 'select';
+let userWaypoints = [];
+let userHazards = [];
+let userSciPoints = [];
+let currentSite = 'jezero';
+
+// ── Mars Sol counter (approximate) ──
+const MARS_SOL_EPOCH = new Date('2021-02-18');
+const currentSol = Math.floor((Date.now() - MARS_SOL_EPOCH.getTime()) / 88775244) + 351;
+document.getElementById('solDisplay').textContent = `Mars Sol: ~${currentSol} (M2020 ref)`;
+
+// ── Site data ──
+const SITES = {
+  jezero: {
+    name: 'Jezero Crater',
+    lat: '18.4°N', lon: '77.7°E', elev: '−2,900m', temp: '−63°C', dust: 'Tau 0.5',
+    molaVal: '−2,900 m', crismVal: 'Mg-carbonate detected', themisVal: '420 TIU',
+    mcsVal: '700 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: '1,200+ sol traverse',
+    wTemp: '−63°C', wWind: '12 m/s', wDust: 'Tau 0.5', wPressure: '700 Pa', wSolar: '590 W/m²', wDevils: '3 detected',
+    terrainSlope: '11.3°', terrainElevChange: '+42m / −18m', terrainTraffic: 'GOOD', terrainRegolith: 'Basaltic + Mg-Carb',
+    description: 'Ancient lake delta — highest Mars biosignature potential'
+  },
+  gale: {
+    name: 'Gale Crater',
+    lat: '5.4°S', lon: '137.8°E', elev: '−4,500m', temp: '−55°C', dust: 'Tau 0.7',
+    molaVal: '−4,500 m', crismVal: 'Sulfates + Phyllosilicates', themisVal: '380 TIU',
+    mcsVal: '740 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: 'Curiosity 3,800+ sol',
+    wTemp: '−55°C', wWind: '8 m/s', wDust: 'Tau 0.7', wPressure: '740 Pa', wSolar: '550 W/m²', wDevils: '1 detected',
+    terrainSlope: '8.5°', terrainElevChange: '+120m / −30m', terrainTraffic: 'MODERATE', terrainRegolith: 'Mudstone + Sulfate',
+    description: 'Mt Sharp layered sediments — chemical evolution record'
+  },
+  hellas: {
+    name: 'Hellas Planitia Basin',
+    lat: '40.0°S', lon: '70.0°E', elev: '−7,150m', temp: '−48°C', dust: 'Tau 1.2',
+    molaVal: '−7,150 m', crismVal: 'Fe-Mg carbonates', themisVal: '520 TIU',
+    mcsVal: '1100 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: 'No rover heritage',
+    wTemp: '−48°C', wWind: '15 m/s', wDust: 'Tau 1.2', wPressure: '1100 Pa', wSolar: '500 W/m²', wDevils: '7 detected',
+    terrainSlope: '5.2°', terrainElevChange: '+8m / −55m', terrainTraffic: 'GOOD (flat basin)', terrainRegolith: 'Fe-Mg carbonate',
+    description: 'Deepest basin — highest atmospheric pressure on Mars'
+  },
+  valles: {
+    name: 'Valles Marineris',
+    lat: '14.0°S', lon: '307.0°E', elev: '−4,000m', temp: '−58°C', dust: 'Tau 0.8',
+    molaVal: '−4,000 m', crismVal: 'Hydrated sulfates / clay', themisVal: '460 TIU',
+    mcsVal: '720 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: 'No rover heritage',
+    wTemp: '−58°C', wWind: '22 m/s', wDust: 'Tau 0.8', wPressure: '720 Pa', wSolar: '580 W/m²', wDevils: '2 detected',
+    terrainSlope: '18.0°', terrainElevChange: '+350m / −800m', terrainTraffic: 'DIFFICULT (cliffs)', terrainRegolith: 'Layered sulfate',
+    description: '4000 km canyon system — geological time capsule'
+  },
+  arcadia: {
+    name: 'Arcadia Planitia',
+    lat: '47.0°N', lon: '192.0°E', elev: '−4,200m', temp: '−72°C', dust: 'Tau 0.4',
+    molaVal: '−4,200 m', crismVal: 'Water ice near-surface', themisVal: '290 TIU',
+    mcsVal: '620 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: 'No rover heritage',
+    wTemp: '−72°C', wWind: '10 m/s', wDust: 'Tau 0.4', wPressure: '620 Pa', wSolar: '430 W/m²', wDevils: '0 detected',
+    terrainSlope: '3.8°', terrainElevChange: '+5m / −10m', terrainTraffic: 'EXCELLENT (flat)', terrainRegolith: 'Water-ice rich',
+    description: 'Accessible ground ice — ISRU water extraction target'
+  },
+  elysium: {
+    name: 'Elysium Planitia',
+    lat: '4.5°N', lon: '135.9°E', elev: '−2,700m', temp: '−52°C', dust: 'Tau 0.6',
+    molaVal: '−2,700 m', crismVal: 'Basaltic plains / dust', themisVal: '400 TIU',
+    mcsVal: '720 Pa surface pressure', hiriseVal: '25 cm/px resolved', persevVal: 'InSight 1,400+ sol',
+    wTemp: '−52°C', wWind: '14 m/s', wDust: 'Tau 0.6', wPressure: '720 Pa', wSolar: '610 W/m²', wDevils: '5 detected',
+    terrainSlope: '4.0°', terrainElevChange: '+12m / −8m', terrainTraffic: 'GOOD', terrainRegolith: 'Basaltic regolith',
+    description: 'InSight seismic network site — subsurface structure data'
+  }
+};
+
+// ── Route data per site ──
+const SITE_ROUTES = {
+  jezero: [
+    { type: 'start', name: 'Base Camp Alpha', detail: 'Habitat airlock egress point', badges: ['badge-shelter'] },
+    { type: 'waypoint', name: 'WP-1 Regolith Survey', detail: 'Soil mechanics sampling · 0.4 km', badges: ['badge-geo', 'badge-science'] },
+    { type: 'waypoint', name: 'WP-2 Lava Flow Margin', detail: 'Basalt contact zone · 0.8 km', badges: ['badge-geo'] },
+    { type: 'poi', name: 'WP-3 Lacustrine Sediments', detail: 'Lake floor sediments (CRISM confirmed) · 1.5 km', badges: ['badge-science', 'badge-sample'] },
+    { type: 'hazard', name: '⚠ Boulder Field Detour', detail: 'HiRISE-flagged boulder zone — route diverts 180m west', badges: ['badge-hazard'] },
+    { type: 'poi', name: 'WP-4 Delta Front Scarp', detail: 'Highest-priority biosignature target · 2.1 km', badges: ['badge-science', 'badge-sample', 'badge-geo'] },
+    { type: 'waypoint', name: 'WP-5 Rest & Suit Check', detail: 'Scheduled 20-min rest — EVA midpoint · 2.4 km', badges: ['badge-shelter'] },
+    { type: 'poi', name: 'WP-6 Olivine Outcrop', detail: 'CRISM olivine detection · 2.8 km', badges: ['badge-science', 'badge-sample'] },
+    { type: 'hazard', name: '⚠ Soft Regolith Zone', detail: 'THEMIS low-TI anomaly — avoid central zone · 3.0 km', badges: ['badge-hazard'] },
+    { type: 'poi', name: 'WP-8 Sample Cache Site', detail: 'Perseverance 10-tube depot retrieval · 3.2 km', badges: ['badge-sample', 'badge-science'] },
+    { type: 'waypoint', name: 'WP-9 Return Traverse', detail: 'Direct return route · 3.8 km cumulative', badges: ['badge-geo'] },
+    { type: 'start', name: 'Base Camp Alpha (Return)', detail: 'Airlock re-entry + decontamination · 4.5 km total', badges: ['badge-shelter'] }
+  ],
+  gale: [
+    { type: 'start', name: 'Base Camp Gale', detail: 'Habitat egress point — crater floor', badges: ['badge-shelter'] },
+    { type: 'waypoint', name: 'WP-1 Murray Formation', detail: 'Mudstone beds — Curiosity heritage site · 0.5 km', badges: ['badge-geo', 'badge-science'] },
+    { type: 'poi', name: 'WP-2 Sulfate Unit', detail: 'Transition zone sulfates (CRISM) · 1.2 km', badges: ['badge-science', 'badge-sample'] },
+    { type: 'poi', name: 'WP-3 Mt Sharp Foothills', detail: 'Layered sediment scarp — stratigraphic column · 2.0 km', badges: ['badge-science', 'badge-geo'] },
+    { type: 'hazard', name: '⚠ Steep Ascent Zone', detail: 'Slope 18° — near EVA limit — use tether protocol', badges: ['badge-hazard'] },
+    { type: 'start', name: 'Base Camp Gale (Return)', detail: 'Return traverse via flat crater floor · 3.5 km total', badges: ['badge-shelter'] }
+  ]
+};
+
+function getSiteRoute(site) {
+  return SITE_ROUTES[site] || SITE_ROUTES.jezero;
+}
+
+// ── Demo mode ──
+function enableDemoMode() {
+  demoMode = true;
+  setStatus('Demo Mode Active · Simulated AI + NASA Data', false);
+  showNotification('Demo mode enabled! All AI responses and NASA data will be realistically simulated.');
+}
+
+function showNotification(msg) {
+  const n = document.createElement('div');
+  n.style.cssText = 'position:fixed;top:68px;right:18px;background:#1e1610;border:1px solid var(--accent);color:var(--accent);padding:10px 14px;border-radius:5px;font-size:11px;z-index:999;max-width:280px;line-height:1.5;font-family:monospace;';
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 4500);
+}
+
+function setStatus(msg, loading = false) {
+  document.getElementById('statusText').textContent = msg;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (loading ? ' loading' : '');
+}
+
+// ── Site update ──
+function updateSite() {
+  const s = document.getElementById('landingSite').value;
+  currentSite = s;
+  const d = SITES[s];
+  if (!d) return;
+  document.getElementById('siteName').textContent = d.name;
+  document.getElementById('weatherSite').textContent = d.name;
+  document.getElementById('stat-lat').textContent = d.lat;
+  document.getElementById('stat-lon').textContent = d.lon;
+  document.getElementById('stat-elev').textContent = d.elev;
+  document.getElementById('stat-temp').textContent = d.temp;
+  document.getElementById('stat-dust').textContent = d.dust;
+  // NASA data cards
+  document.getElementById('mola-val').textContent = d.molaVal;
+  document.getElementById('crism-val').textContent = d.crismVal;
+  document.getElementById('themis-val').textContent = d.themisVal;
+  document.getElementById('mcs-val').textContent = d.mcsVal;
+  document.getElementById('hirise-val').textContent = d.hiriseVal;
+  document.getElementById('persev-val').textContent = d.persevVal;
+  // Weather
+  document.getElementById('w-temp').textContent = d.wTemp;
+  document.getElementById('w-wind').textContent = d.wWind;
+  document.getElementById('w-dust').textContent = d.wDust;
+  document.getElementById('w-pressure').textContent = d.wPressure;
+  document.getElementById('w-solar').textContent = d.wSolar;
+  document.getElementById('w-devils').textContent = d.wDevils;
+  // Terrain
+  document.getElementById('terrain-slope').textContent = d.terrainSlope;
+  document.getElementById('terrain-elev-change').textContent = d.terrainElevChange;
+  document.getElementById('terrain-traffic').textContent = d.terrainTraffic;
+  document.getElementById('terrain-regolith').textContent = d.terrainRegolith;
+  renderMap();
+  renderTerrainProfile();
+  renderForecast();
+}
+
+// ── Tab switching ──
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  panel.classList.add('active');
+  if (name === 'chat') panel.style.display = 'flex';
+  event.currentTarget.classList.add('active');
+  if (name === 'terrain') renderTerrainProfile();
+}
+function showTab_direct(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  panel.classList.add('active');
+  if (name === 'chat') panel.style.display = 'flex';
+  const tabs = ['map','marswalk','data','weather','terrain','science','hazards','chat'];
+  const idx = tabs.indexOf(name);
+  if (idx >= 0) document.querySelectorAll('.tab')[idx].classList.add('active');
+  if (name === 'terrain') renderTerrainProfile();
+}
+
+// ── Map tool ──
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1)).classList.add('active');
+}
+
+function clearRoute() {
+  userWaypoints = []; userHazards = []; userSciPoints = [];
+  renderMap();
+  document.getElementById('mapCoords').textContent = 'Route cleared — click to add points';
+}
+
+function onMapClick(e) {
+  const rect = e.target.getBoundingClientRect();
+  const scaleX = e.target.width / rect.width;
+  const scaleY = e.target.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  const latFake = (18.5 - (y / e.target.height) * 0.5).toFixed(4);
+  const lonFake = (77.4 + (x / e.target.width) * 0.6).toFixed(4);
+  document.getElementById('mapCoords').textContent = `${latFake}°N, ${lonFake}°E`;
+  if (currentTool === 'waypoint') { userWaypoints.push({ x, y, label: `WP-${userWaypoints.length + 1}` }); renderMap(); }
+  else if (currentTool === 'hazard') { userHazards.push({ x, y }); renderMap(); }
+  else if (currentTool === 'sci') { userSciPoints.push({ x, y }); renderMap(); }
+}
+
+// ── Map renderer ──
+function renderMap() {
+  const canvas = document.getElementById('marsMapCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const site = document.getElementById('landingSite').value;
+  const showMOLA = document.getElementById('layerMOLA').checked;
+  const showCRISM = document.getElementById('layerCRISM').checked;
+  const showTHEMIS = document.getElementById('layerTHEMIS').checked;
+  const showHiRISE = document.getElementById('layerHiRISE').checked;
+  const showRoute = document.getElementById('layerRoute').checked;
+  const showHazard = document.getElementById('layerHazard').checked;
+  const showSci = document.getElementById('layerSci').checked;
+  const showWeather = document.getElementById('layerWeather').checked;
+
+  // Base Mars surface
+  const bgGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W*0.7);
+  bgGrad.addColorStop(0, '#3d1e0a');
+  bgGrad.addColorStop(0.5, '#2a1206');
+  bgGrad.addColorStop(1, '#1a0c04');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // MOLA topography layer
+  if (showMOLA) {
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      const cx = 200 + i * 50, cy = 180 + i * 15;
+      ctx.ellipse(cx, cy, 120 - i*10, 60 - i*6, 0.3, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(200, 75, 14, ${0.15 + i*0.04})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Elevation gradient overlay
+    const elevGrad = ctx.createLinearGradient(0, 0, W, H);
+    elevGrad.addColorStop(0, 'rgba(120, 42, 8, 0.25)');
+    elevGrad.addColorStop(0.4, 'rgba(180, 68, 20, 0.1)');
+    elevGrad.addColorStop(1, 'rgba(80, 30, 10, 0.2)');
+    ctx.fillStyle = elevGrad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // CRISM mineralogy patches
+  if (showCRISM) {
+    const minerals = [
+      { x: 280, y: 180, r: 55, color: 'rgba(46, 204, 113, 0.18)' },
+      { x: 420, y: 220, r: 40, color: 'rgba(46, 204, 113, 0.22)' },
+      { x: 350, y: 150, r: 30, color: 'rgba(46, 204, 113, 0.15)' },
+      { x: 510, y: 260, r: 35, color: 'rgba(52, 152, 219, 0.15)' }
+    ];
+    minerals.forEach(m => {
+      const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+      g.addColorStop(0, m.color);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  // THEMIS thermal inertia layer
+  if (showTHEMIS) {
+    const thermals = [
+      { x: 150, y: 300, r: 70, color: 'rgba(230, 126, 34, 0.2)' },
+      { x: 600, y: 200, r: 55, color: 'rgba(230, 126, 34, 0.15)' },
+      { x: 400, y: 340, r: 45, color: 'rgba(231, 76, 60, 0.2)' }
+    ];
+    thermals.forEach(t => {
+      const g = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.r);
+      g.addColorStop(0, t.color);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  // HiRISE coverage blocks
+  if (showHiRISE) {
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    [[120,100,220,200],[300,80,260,180],[480,200,200,160],[80,280,180,140]].forEach(([x,y,w,h]) => {
+      ctx.strokeRect(x, y, w, h);
+    });
+    ctx.setLineDash([]);
+  }
+
+  // Terrain texture — rocks, craters
+  ctx.fillStyle = 'rgba(100, 55, 20, 0.5)';
+  const craterData = site === 'jezero' ? 
+    [[220,160,28],[450,280,18],[140,320,22],[580,150,15],[340,350,12],[650,310,20]] :
+    [[200,180,20],[380,250,16],[500,200,25],[150,300,18]];
+  craterData.forEach(([cx,cy,r]) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(60,30,10,0.3)';
+    ctx.fill();
+    ctx.fillStyle = 'rgba(100,55,20,0.5)';
+  });
+
+  // Planned route
+  if (showRoute) {
+    const routePoints = [
+      [110, 390], [170, 340], [230, 300], [280, 240], [310, 190],
+      [360, 160], [420, 150], [460, 165], [510, 200], [540, 250],
+      [500, 310], [450, 350], [380, 380], [300, 395]
+    ];
+    ctx.beginPath();
+    ctx.moveTo(routePoints[0][0], routePoints[0][1]);
+    routePoints.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Waypoint markers
+    routePoints.filter((_, i) => i % 2 === 0).forEach(([x, y], i) => {
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI*2);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText(`${i+1}`, x + 7, y + 4);
+    });
+
+    // Start/end markers
+    ctx.beginPath();
+    ctx.arc(routePoints[0][0], routePoints[0][1], 8, 0, Math.PI*2);
+    ctx.fillStyle = '#22c55e';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px monospace';
+    ctx.fillText('S', routePoints[0][0] - 4, routePoints[0][1] + 4);
+    ctx.beginPath();
+    ctx.arc(routePoints[routePoints.length-1][0], routePoints[routePoints.length-1][1], 8, 0, Math.PI*2);
+    ctx.fillStyle = '#22c55e';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText('E', routePoints[routePoints.length-1][0] - 4, routePoints[routePoints.length-1][1] + 4);
+  }
+
+  // Hazard zones
+  if (showHazard) {
+    const hazards = [[320, 215, 38], [490, 230, 30], [200, 275, 25]];
+    hazards.forEach(([hx, hy, hr]) => {
+      const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, hr);
+      hg.addColorStop(0, 'rgba(239, 68, 68, 0.35)');
+      hg.addColorStop(1, 'rgba(239, 68, 68, 0.08)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(hx, hy, hr, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3,2]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('⚠', hx - 7, hy + 5);
+    });
+  }
+
+  // Science targets
+  if (showSci) {
+    const sciPts = [[360, 160], [460, 165], [510, 200], [280, 240]];
+    sciPts.forEach(([sx, sy], i) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 7, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.85)';
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(`S${i+1}`, sx - 5, sy + 3);
+    });
+  }
+
+  // Wind/dust arrows
+  if (showWeather) {
+    ctx.strokeStyle = 'rgba(126,200,216,0.5)';
+    ctx.lineWidth = 1.5;
+    for (let wx = 60; wx < W - 60; wx += 80) {
+      for (let wy = 50; wy < H - 50; wy += 70) {
+        const jx = wx + (Math.random() - 0.5) * 20;
+        const jy = wy + (Math.random() - 0.5) * 20;
+        ctx.beginPath();
+        ctx.moveTo(jx, jy);
+        ctx.lineTo(jx + 18, jy - 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(jx + 18, jy - 8);
+        ctx.lineTo(jx + 12, jy - 3);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // User-added points
+  userWaypoints.forEach(({ x, y, label }) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.fillStyle = '#60a5fa';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '9px monospace';
+    ctx.fillText(label, x + 8, y + 3);
+  });
+  userHazards.forEach(({ x, y }) => {
+    ctx.fillStyle = 'rgba(239,68,68,0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.fill();
+  });
+  userSciPoints.forEach(({ x, y }) => {
+    ctx.fillStyle = 'rgba(245,158,11,0.85)';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Map label
+  ctx.fillStyle = 'rgba(160, 96, 48, 0.7)';
+  ctx.font = '10px monospace';
+  const d = SITES[site];
+  ctx.fillText(`${d ? d.name.toUpperCase() : ''} · MARSWALK SURFACE MAP · NASA/MRO+MGS+M2020 DATA`, 14, 20);
+  ctx.fillText(`Coord: ${d ? d.lat : ''}, ${d ? d.lon : ''}  |  Layers: MOLA·CRISM·HiRISE·THEMIS`, 14, H - 10);
+}
+
+// ── Terrain SVG ──
+function renderTerrainProfile() {
+  const svg = document.getElementById('terrainSVG');
+  const W = 740, H = 220;
+  // Elevation profiles per site
+  const profiles = {
+    jezero: [0,5,8,12,18,14,10,6,3,8,15,22,28,24,20,15,11,7,3,0],
+    gale: [0,10,20,35,48,60,55,42,30,22,15,18,25,35,45,52,48,40,30,0],
+    hellas: [0,2,3,5,4,3,2,4,6,5,3,2,1,3,4,6,5,3,2,0],
+    valles: [0,15,35,80,120,180,200,160,120,90,60,40,25,15,8,12,18,10,5,0],
+    arcadia: [0,2,3,2,4,3,2,1,3,4,2,1,2,3,4,3,2,1,2,0],
+    elysium: [0,4,6,8,7,5,4,6,8,10,8,6,4,3,5,6,4,3,2,0]
+  };
+  const profile = profiles[currentSite] || profiles.jezero;
+  const maxH = Math.max(...profile);
+  const pts = profile.map((v, i) => {
+    const x = 40 + i * (660 / (profile.length - 1));
+    const y = 180 - (v / Math.max(maxH, 1)) * 140;
+    return `${x},${y}`;
+  });
+
+  const path = `M ${pts.join(' L ')}`;
+  const fillPath = `M 40,180 L ${pts.join(' L ')} L ${40 + 660},180 Z`;
+  const distLabels = profile.map((_, i) => {
+    const x = 40 + i * (660 / (profile.length - 1));
+    const dist = (i * 4.5 / (profile.length - 1)).toFixed(1);
+    return i % 4 === 0 ? `<text x="${x}" y="200" text-anchor="middle" fill="#a08060" font-size="10" font-family="monospace">${dist}km</text>` : '';
+  }).join('');
+
+  svg.innerHTML = `
+    <rect width="${W}" height="${H}" fill="#1e1610" rx="4"/>
+    <defs>
+      <linearGradient id="terrainGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#c84b0e" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#7a2a08" stop-opacity="0.2"/>
+      </linearGradient>
+    </defs>
+    <path d="${fillPath}" fill="url(#terrainGrad)"/>
+    <path d="${path}" fill="none" stroke="#e8642a" stroke-width="2.5"/>
+    <line x1="40" y1="20" x2="40" y2="185" stroke="#3d2e20" stroke-width="1"/>
+    <line x1="40" y1="180" x2="700" y2="180" stroke="#3d2e20" stroke-width="1"/>
+    <text x="14" y="25" fill="#a08060" font-size="10" font-family="monospace">+${maxH}m</text>
+    <text x="14" y="185" fill="#a08060" font-size="10" font-family="monospace">0m</text>
+    <text x="350" y="215" text-anchor="middle" fill="#a08060" font-size="10" font-family="monospace">ROUTE DISTANCE (km) · MOLA ELEVATION DATA</text>
+    ${distLabels}
+  `;
+}
+
+// ── Forecast renderer ──
+function renderForecast() {
+  const bar = document.getElementById('forecastBar');
+  const icons = ['☀','🌤','☀','💨','🌪','☀','☀','🌤','💨','☀'];
+  const dustLevels = ['0.4','0.5','0.5','0.7','1.2','0.6','0.5','0.5','0.8','0.5'];
+  bar.innerHTML = icons.map((icon, i) => `
+    <div class="forecast-day">
+      <div class="forecast-sol">Sol +${i+1}</div>
+      <div class="forecast-icon">${icon}</div>
+      <div class="forecast-temp">${-62 + Math.floor(Math.sin(i)*8)}°C</div>
+      <div class="forecast-dust">τ ${dustLevels[i]}</div>
+    </div>
+  `).join('');
+}
+
+// ── Route list renderer ──
+function renderRouteList(site) {
+  const list = document.getElementById('routeList');
+  const route = getSiteRoute(site);
+  list.innerHTML = route.map((wp, i) => `
+    <div class="route-item ${wp.type}">
+      <div class="wp-num">WP ${String(i).padStart(2,'0')}</div>
+      <div class="wp-content">
+        <div class="wp-name">${wp.name}</div>
+        <div class="wp-detail">${wp.detail}</div>
+        <div class="wp-badges">${wp.badges.map(b => `<span class="wp-badge ${b}">${b.replace('badge-','').toUpperCase()}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═════════════════════════════════════════════════════
+//   IBM watsonx API Integration
+// ═════════════════════════════════════════════════════
+
+async function callWatsonx(prompt, systemPrompt) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const projectId = document.getElementById('projectId').value.trim();
+  if (!apiKey || !projectId) throw new Error('Enter IBM watsonx API key and Project ID, or enable Demo Mode.');
+
+  const tokenRes = await fetch('https://iam.cloud.ibm.com/identity/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${encodeURIComponent(apiKey)}`
+  });
+  if (!tokenRes.ok) throw new Error('IBM IAM authentication failed.');
+  const { access_token: token } = await tokenRes.json();
+
+  const res = await fetch('https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model_id: 'ibm/granite-13b-instruct-v2',
+      input: `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`,
+      parameters: { decoding_method: 'greedy', max_new_tokens: 900, min_new_tokens: 50, stop_sequences: ['User:','Human:'], temperature: 0.7 },
+      project_id: projectId
+    })
+  });
+  if (!res.ok) throw new Error(`watsonx API error ${res.status}`);
+  const data = await res.json();
+  return data.results?.[0]?.generated_text?.trim() || 'No response generated.';
+}
+
+const MARSWALK_SYSTEM_PROMPT = `You are MarswalkAI, an expert AI assistant for human Mars surface operations. You integrate NASA mission data from:
+- MOLA (Mars Orbiter Laser Altimeter) topography: precise elevation maps
+- CRISM (Compact Reconnaissance Imaging Spectrometer) mineralogy: biosignature targets, water-related minerals
+- THEMIS (Thermal Emission Imaging System) thermal inertia: terrain trafficability assessment
+- HiRISE (High Resolution Imaging Science Experiment) imagery: 25cm/px surface detail, boulder fields, hazards
+- MCS (Mars Climate Sounder) atmospheric profiles: dust opacity, temperature, wind
+- Perseverance/Curiosity rover ground truth: regolith properties, actual traversability
+- Mars space weather: solar energetic particle events, radiation dose rates
+
+You help astronauts plan safe, scientifically productive EVAs (Extravehicular Activities) on the Martian surface. Always prioritise crew safety, then science objectives, then schedule efficiency. Provide specific, numerical, actionable guidance.`;
+
+// ═════════════════════════════════════════════════════
+//   Demo Responses
+// ═════════════════════════════════════════════════════
+const DEMO = {
+  marswalk: `MARSWALK PLAN: JEZERO CRATER EVA-1
+════════════════════════════════════════
+Date: Mars Sol ${currentSol + 5} | Duration: 6h | Crew: 2 EVA
+Objective: Geological survey + sample collection
+
+ROUTE SUMMARY
+Total distance: 4.5 km (out-and-back modified loop)
+Elevation change: +42m ascent / −18m descent
+Max slope encountered: 11.3° (within 15° limit)
+Estimated completion time: 5h 42min (18min contingency)
+
+PHASE 1 — EGRESS & CALIBRATION (0:00–0:45)
+• 0:00 — Airlock egress, suit systems check at Base Camp Alpha
+• 0:15 — WP-1 Regolith Survey: APXS soil measurement, texture analysis
+• 0:30 — WP-2 Basalt Contact Zone: rock chip sample, context imaging
+• 0:45 — All instruments nominal, proceed to WP-3
+
+PHASE 2 — LAKE FLOOR TRAVERSE (0:45–2:00)
+• 0:50 — WP-3 Lacustrine Sediments: SHERLOC Raman scan, 3 drill samples
+  → CRISM confirms hydrated minerals — PRIORITY collection zone
+  → Budget 30 minutes; collect fine-grained grey mudstone cores
+• 1:30 — BOULDER FIELD DETOUR: route diverts 180m west (HiRISE flagged)
+  → Adds 12 minutes; slopes reduce to 8° on alternate path
+• 2:00 — WP-4 Delta Front Scarp ARRIVAL
+
+PHASE 3 — PRIMARY SCIENCE (2:00–4:00)
+• 2:00 — WP-4 Jezero Delta Scarp: highest-priority biosignature site
+  → PIXL XRF elemental mapping × 2 targets (15 min each)
+  → SHERLOC organic detection scan × 3 spots
+  → Drill sample: 6 cm depth, 3 cores
+  → Context panorama + close-up imaging
+  → MEDA micro-met measurement (wind, temp, pressure)
+• 3:30 — WP-5 Midpoint Rest: 20-min scheduled break, suit telemetry review
+  → Consume 500 mL fluid, nutrition bar
+  → EVA controller GO/NO-GO check from Base Camp
+
+PHASE 4 — RETURN WITH SECONDARY SCIENCE (4:00–6:00)
+• 4:00 — WP-6 Olivine Outcrop: 2 samples, SHERLOC scan, imaging
+• 4:30 — SOFT REGOLITH ZONE: AVOID — route skirts 45m to north
+  → THEMIS low-TI anomaly confirmed: unconsolidated dust deposit
+• 5:00 — WP-8 Sample Cache: retrieve 3 of 10 Perseverance tube depot
+  → GPS survey of remaining tubes for future retrieval
+• 5:30 — Return traverse, direct route to Base Camp
+• 5:50 — EVA-end health check, final MEDA reading
+• 6:00 — Airlock ingress, decontamination protocol (perchlorate)
+
+RESOURCE BUDGET
+O2 consumption: 0.84 kg (margin: 0.42 kg = 33% reserve)
+Suit battery: 86% consumed at EVA end (14% reserve — NOMINAL)
+Water: 1.5 L consumed (0.5 L reserve)
+Samples collected: ~800 g total (6 drill cores + 3 rover tubes)
+
+GO/NO-GO CONDITIONS
+✅ Dust τ < 1.5 (current: 0.5 — CLEAR)
+✅ Wind < 25 m/s (current: 12 m/s — SAFE)
+✅ No SPE alert active (NOAA/ESA nominal)
+✅ Temperature window 08:00–14:00 LMST
+
+Generated by MarswalkAI × IBM watsonx Granite
+NASA data sources: MOLA · CRISM · THEMIS · HiRISE · MCS · M2020`,
+
+  hazards: `HAZARD ASSESSMENT: JEZERO EVA-1
+════════════════════════════════════════
+
+RADIATION ENVIRONMENT
+Current GCR dose rate: 0.24 mSv/hr (surface)
+Solar activity: Quiet — Kp=2, no SPE warning
+EVA limit: 6 hr × 0.24 = 1.44 mSv total dose (well within 25 mSv daily limit)
+RECOMMENDATION: GO — monitor continuously via suit dosimeter
+Action threshold: 10 mSv/hr → immediate shelter return (3 min to habitat)
+
+TERRAIN HAZARDS (HiRISE-derived)
+1. Boulder Field WP-3→WP-4: 52 boulders >0.5m in 80m corridor
+   → Detour approved: adds 180m, slope reduces to 8°
+2. Soft regolith WP-7: THEMIS TI < 300 J/m²/K/√s → loose dust >30 cm deep
+   → AVOID: potential suit mobility impairment, possible fall risk
+3. Crater rim WP-4: 11° mean slope with 14° local maximum
+   → Within limits (20° suit mobility, 15° recommended). Use tether option.
+
+ATMOSPHERIC HAZARDS (MCS data)
+Current dust τ = 0.5: CLEAR. UV Index: EXTREME (no dust shielding)
+Dust storm probability next 5 sols: 8% (low season — northern spring)
+Wind: 12 m/s NW; gusts to 18 m/s afternoon. Schedule EVA before 13:00 LMST
+Dust devils: 3 detected in 20 km radius. Largest: 80m diameter, 4 km away moving SE
+
+CHEMICAL HAZARDS
+Perchlorate concentration: 0.5 wt% (Phoenix-heritage, standard Mars)
+→ MANDATORY: Full decontamination at airlock re-entry
+→ No suit inlet exposure to loose regolith; sample sealing protocol required
+→ Crew briefed: do not remove gloves in field (obvious, but documented)
+
+RISK SUMMARY
+Overall EVA risk: MEDIUM-LOW
+Go/No-Go Decision: ✅ GO — with route modifications applied
+Emergency procedures: reviewed, shelter 200m SW, comm check every 30 min`,
+
+  science: `SCIENCE BRIEF: JEZERO CRATER — EVA-1
+════════════════════════════════════════
+
+MISSION CONTEXT
+Jezero Crater is a 49-km ancient lake delta that received water ~3.5–3.8 Gyr ago. CRISM spectroscopy detects Mg-carbonates, hydrated silicates, and olivine — precisely the minerals associated with ancient microbial biosignature preservation on Earth. This is the highest-value science site on Mars.
+
+PRIORITY 1 TARGETS
+▸ Delta Front Scarp (WP-4): This is your primary target. CRISM Mg-carbonate signal here is the strongest in the region. On Earth, carbonates formed in alkaline lake environments (similar chemistry) preserve microbial biosignatures for billions of years. Collect minimum 3 drill cores to 6 cm depth. Use SHERLOC for in-situ Raman spectroscopy before disturbance.
+
+▸ Lacustrine Sediments (WP-3): Fine-grained grey mudstone deposited in deep, quiet lake water. Highest organic preservation potential of any facies. Measure 2m stratigraphic section; note colour changes and bedding angles. These layers represent Mars' last habitable era.
+
+PRIORITY 2 TARGETS
+▸ Olivine Outcrop (WP-6): Unweathered olivine = rapid burial and preservation. Key for establishing Mars water activity timeline. Single chip sample (50g) plus SHERLOC scan sufficient; don't over-collect.
+
+▸ Perseverance Sample Tubes (WP-8): 10 tubes cached by rover — retrieve minimum 3. These are the most precious samples in Solar System exploration history. GPS survey remaining 7 for future EVA.
+
+INSTRUMENT STRATEGY
+Time allocation (science EVA):
+• SHERLOC Raman: 6 scans × 8 min = 48 min
+• PIXL XRF mapping: 4 targets × 15 min = 60 min
+• Drill coring: 6 cores × 8 min = 48 min
+• Context imaging: continuous, zero extra time
+• Sample packaging: 20 min total
+
+KEY QUESTION THIS EVA ANSWERS:
+"Did microbial life exist in Jezero Lake 3.7 billion years ago?"
+
+Generated by MarswalkAI × IBM watsonx Granite`,
+
+  weather: `MARS WEATHER REPORT: JEZERO CRATER
+════════════════════════════════════════
+Source: MCS · MEDA heritage · REMS (Curiosity)
+
+CURRENT CONDITIONS (Sol ${currentSol})
+Surface temperature: −63°C (range: −80°C night / −20°C midday)
+Wind: 12 m/s from NW (gusts to 18 m/s in afternoon)
+Dust optical depth (τ): 0.5 — CLEAR CONDITIONS
+Atmospheric pressure: 700 Pa (diurnal range 640–730 Pa)
+Solar irradiance: 590 W/m² (43% Earth equivalent at 1.52 AU)
+UV index: EXTREME — suit UV protection essential
+
+EVA WEATHER WINDOW
+Recommended EVA window: 08:30–14:00 LMST (5.5 hours)
+Reason: Temperature at acceptable minimum by 08:30, convective winds increase after 13:00
+Optimal start: 09:00 LMST — maximum thermal comfort, minimum dust devil activity
+
+DUST STORM RISK ASSESSMENT
+Current season: Northern spring (low-risk period)
+Regional storm probability (next 10 sols): 12%
+Global storm probability: 2% (not storm season)
+All-clear confirmed by MCS orbital track Sol ${currentSol-1}: no elevated dust columns within 500 km
+
+DUST DEVIL ACTIVITY
+Today: 3 dust devils detected in EVA zone (50–120m diameter)
+Peak activity: 11:00–15:00 LMST (heating-driven convection)
+Recommendation: Complete primary EVA objectives before 13:00 LMST
+
+POWER IMPLICATIONS
+Solar panels: 92% nominal output at τ=0.5
+If τ increases to 2.0 (regional storm): power drops to 55% — initiate storm prep
+Suit battery: No solar input — internal battery only. 14% reserve at EVA end.
+
+FORECAST — NEXT 5 SOLS
+Sol+1: ☀ Clear, τ=0.5, wind 10 m/s — EXCELLENT
+Sol+2: ☀ Clear, τ=0.5, wind 11 m/s — EXCELLENT  
+Sol+3: 🌤 Hazy, τ=0.7, wind 14 m/s — GOOD
+Sol+4: 💨 Breezy, τ=0.9, wind 19 m/s — MARGINAL (delay recommended)
+Sol+5: ☀ Clear, τ=0.5, wind 9 m/s — EXCELLENT
+
+GO/NO-GO: ✅ GO for tomorrow Sol+1 09:00 LMST start
+Generated by MarswalkAI × IBM watsonx · MCS atmospheric data`
+};
+
+// ═════════════════════════════════════════════════════
+//   Action Handlers
+// ═════════════════════════════════════════════════════
+
+async function generateMarswalkPlan() {
+  const site = document.getElementById('landingSite').value;
+  const duration = document.getElementById('walkDuration').value;
+  const evaSize = document.getElementById('evaSize').value;
+  const objective = document.getElementById('objective').value;
+
+  setStatus('Generating Marswalk plan…', true);
+  showTab_direct('marswalk');
+  renderRouteList(site);
+
+  const el = document.getElementById('marswalkAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(2000);
+      text = DEMO.marswalk.replace('Sol ' + (currentSol + 5 - currentSol), `Sol ${currentSol + 5}`);
+    } else {
+      const siteData = SITES[site];
+      const prompt = `Generate a detailed EVA Marswalk plan for ${siteData.name} (${siteData.lat}, ${siteData.lon}, elevation ${siteData.elev}). Duration: ${duration} hours, ${evaSize} crew, objective: ${objective}. Integrate MOLA topography, CRISM mineralogy (${siteData.crismVal}), THEMIS thermal inertia (${siteData.themisVal}), HiRISE terrain data. Include phase-by-phase route, time allocation, science priorities, hazard avoidance, and resource budget.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 8);
+    // Also update map output
+    const mapEl = document.getElementById('mapAIText');
+    mapEl.className = 'ai-text';
+    mapEl.textContent = `✅ Marswalk plan generated for ${SITES[site].name}.\n\n${SITES[site].description}\n\nRoute: 4.5 km loop | Duration: ${duration}h | EVA size: ${evaSize}\nKey targets: Delta scarp (P1), Olivine outcrop (P1), Sample cache (P2)\nHazards flagged: 3 (boulder field, soft regolith, dust devil zone)\n\nSee "Marswalk Plan" tab for full AI-generated route details.`;
+    setStatus('Marswalk plan ready · NASA data integrated', false);
+    showNotification('Marswalk plan generated! See the Marswalk Plan tab for details.');
+  } catch (e) {
+    el.className = 'ai-text';
+    el.textContent = '⚠ Error: ' + e.message;
+    setStatus('Error — check credentials or enable Demo Mode', false);
+  }
+}
+
+async function analyzeHazards() {
+  setStatus('Assessing EVA hazards…', true);
+  showTab_direct('hazards');
+  const el = document.getElementById('hazardAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  try {
+    let text;
+    if (demoMode) { await sleep(1500); text = DEMO.hazards; }
+    else {
+      const site = SITES[document.getElementById('landingSite').value];
+      const prompt = `Perform a comprehensive EVA hazard assessment for ${site.name}. Analyse: 1) Radiation environment (SPE risk, GCR dose rates), 2) Terrain hazards from HiRISE data (boulders, slopes, soft regolith), 3) Atmospheric hazards (dust opacity ${site.dust}, wind ${site.wWind}, dust devils), 4) Chemical hazards (perchlorates, UV), 5) Thermal hazards. Provide specific numbers, go/no-go criteria, and emergency procedures.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 10);
+    setStatus('Hazard assessment complete · HiRISE+MCS data', false);
+  } catch (e) { el.className = 'ai-text'; el.textContent = '⚠ Error: ' + e.message; setStatus('Error', false); }
+}
+
+async function generateScienceBrief() {
+  setStatus('Generating science brief…', true);
+  showTab_direct('science');
+  const el = document.getElementById('sciAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  try {
+    let text;
+    if (demoMode) { await sleep(1600); text = DEMO.science; }
+    else {
+      const site = SITES[document.getElementById('landingSite').value];
+      const obj = document.getElementById('objective').value;
+      const prompt = `Generate a detailed EVA science brief for ${site.name}, objective: ${obj}. Include: 1) Site scientific context and significance, 2) Priority science targets with CRISM mineralogy data (${site.crismVal}), 3) Instrument strategy (SHERLOC, PIXL, drill, imaging), 4) Time allocation per target, 5) Key scientific questions this EVA can answer. Ground all recommendations in NASA mission heritage data.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 10);
+    setStatus('Science brief ready · CRISM + rover data', false);
+  } catch (e) { el.className = 'ai-text'; el.textContent = '⚠ Error: ' + e.message; setStatus('Error', false); }
+}
+
+async function generateWeatherBrief() {
+  setStatus('Generating weather report…', true);
+  showTab_direct('weather');
+  const el = document.getElementById('weatherAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  try {
+    let text;
+    if (demoMode) { await sleep(1400); text = DEMO.weather; }
+    else {
+      const site = SITES[document.getElementById('landingSite').value];
+      const prompt = `Generate a detailed Mars weather report for EVA planning at ${site.name}. Use MCS atmospheric data: temperature ${site.wTemp}, wind ${site.wWind}, dust opacity ${site.wDust}, pressure ${site.wPressure}. Include: EVA weather window, dust storm risk, dust devil activity, UV/radiation, 5-sol forecast, and go/no-go weather criteria.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 10);
+    setStatus('Weather report generated · MCS data', false);
+  } catch (e) { el.className = 'ai-text'; el.textContent = '⚠ Error: ' + e.message; setStatus('Error', false); }
+}
+
+async function generateEVAChecklist() {
+  setStatus('Generating EVA checklist…', true);
+  showTab_direct('marswalk');
+  const el = document.getElementById('marswalkAIText');
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  const site = SITES[document.getElementById('landingSite').value];
+  const duration = document.getElementById('walkDuration').value;
+  const evaSize = document.getElementById('evaSize').value;
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(1300);
+      text = `EVA PRE-INGRESS CHECKLIST: ${site.name.toUpperCase()}
+${'═'.repeat(50)}
+EVA Duration: ${duration}h | Crew: ${evaSize} | Sol: ${currentSol + 5}
+
+☐ SUIT INTEGRITY (T−2h)
+  ☐ Pressure integrity check: hold 41 kPa for 10 min
+  ☐ O2 supply confirmed: ${(parseFloat(duration) * 0.14 * parseInt(evaSize)).toFixed(1)} kg required + 33% reserve
+  ☐ CO2 scrubber cartridge: new (< 4h life remaining)
+  ☐ Battery: 100% charge (${Math.round(parseFloat(duration) * 86)}% consumed at EVA end estimated)
+  ☐ Suit telemetry link: nominal
+  ☐ Helmet camera + HUD: operational
+  ☐ Dosimeter: reading zero / reset
+
+☐ INSTRUMENTS & SAMPLES (T−1h)
+  ☐ SHERLOC laser arm: calibrated, target loaded
+  ☐ PIXL: calibrated, detector covers removed
+  ☐ Drill bits: 3× charged (6cm drill cores planned)
+  ☐ Sample tubes: 10× sterile, numbered, manifested
+  ☐ Hand lens camera: 100% battery, SD card clear
+  ☐ GPS unit: locked on 4+ satellites
+
+☐ COMMUNICATIONS (T−30min)
+  ☐ Primary UHF comm: check with Base Camp
+  ☐ Backup S-band link: DSN contact established
+  ☐ Emergency beacon: armed and tested
+  ☐ EVA timeline loaded to suit HUD
+  ☐ Route waypoints confirmed on map display
+
+☐ WEATHER & SAFETY (T−15min)
+  ☐ Dust τ < 1.5: CONFIRMED (current ${site.dust})
+  ☐ Wind < 25 m/s: CONFIRMED (current ${site.wWind})
+  ☐ No SPE alert: CONFIRMED (space weather nominal)
+  ☐ Emergency shelter location briefed: Base Camp 200m SW
+  ☐ Buddy system confirmed: both crew suit checks complete
+  ☐ Abort criteria reviewed: radiation, weather, suit failure
+
+☐ DECONTAMINATION READY
+  ☐ Airlock decon station stocked: brush, wipes, bag
+  ☐ Perchlorate protocol briefed to crew
+  ☐ Sample sealing protocol confirmed
+
+✅ EVA GO/NO-GO: ALL CHECKS COMPLETE
+Generated by MarswalkAI × IBM watsonx Granite`;
+    } else {
+      const prompt = `Generate a comprehensive pre-EVA checklist for a ${duration}-hour Marswalk at ${site.name} with ${evaSize} crew. Include suit integrity, instrument preparation, communications, weather go/no-go criteria (current dust ${site.dust}, wind ${site.wWind}), emergency procedures, and decontamination protocol. Format as checkboxes.`;
+      text = await callWatsonx(prompt, MARSWALK_SYSTEM_PROMPT);
+    }
+    await typeText(el, text, 9);
+    setStatus('EVA checklist generated', false);
+  } catch (e) { el.className = 'ai-text'; el.textContent = '⚠ Error: ' + e.message; setStatus('Error', false); }
+}
+
+// ── Chat ──
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || isLoading) return;
+  input.value = '';
+  isLoading = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  appendChatMsg(msg, 'user');
+  const thinkBubble = appendChatMsg('▌', 'ai');
+  setStatus('MarswalkAI thinking…', true);
+  try {
+    let response;
+    if (demoMode) {
+      await sleep(1300);
+      response = getMarswalkChatResponse(msg);
+    } else {
+      const site = SITES[document.getElementById('landingSite').value];
+      const ctx = `${MARSWALK_SYSTEM_PROMPT}\n\nCurrent EVA context: ${site.name} (${site.lat}, ${site.lon}, ${site.elev}). Dust: ${site.dust}. Temp: ${site.temp}. CRISM: ${site.crismVal}. THEMIS: ${site.themisVal}.`;
+      response = await callWatsonx(msg, ctx);
+    }
+    thinkBubble.textContent = '';
+    await typeText(thinkBubble, response, 12);
+    setStatus('Ready · NASA data integrated', false);
+  } catch (e) {
+    thinkBubble.textContent = '⚠ ' + e.message;
+    setStatus('Error', false);
+  }
+  isLoading = false;
+  document.getElementById('chatSendBtn').disabled = false;
+}
+
+function appendChatMsg(text, role) {
+  const history = document.getElementById('chatHistory');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar avatar-${role}`;
+  avatar.textContent = role === 'ai' ? '🔴' : '👨‍🚀';
+  const bubble = document.createElement('div');
+  bubble.className = `msg-bubble${role === 'user' ? ' user' : ''}`;
+  bubble.textContent = text;
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  history.appendChild(div);
+  history.scrollTop = history.scrollHeight;
+  return bubble;
+}
+
+function getMarswalkChatResponse(msg) {
+  const lower = msg.toLowerCase();
+  if (lower.includes('radiation') || lower.includes('spe') || lower.includes('dose')) {
+    return `RADIATION ASSESSMENT — MARS SURFACE EVA\n\nCurrent surface dose rate: 0.24 mSv/hr (GCR background)\nExpected 6-hr EVA dose: ~1.44 mSv\nNASA career limit: 600 mSv (Apollo-era) → 250–1000 mSv modern (age/sex dependent)\n\nThe primary risk during an EVA is a Solar Particle Event (SPE). A major SPE like August 1972 or October 2003 could deliver >100 mSv in hours — potentially life-threatening without shielding.\n\nSPE Mitigation Protocol:\n1. Real-time NOAA/ESA space weather monitoring (15-min warning window possible)\n2. EVA abort threshold: 10 mSv/hr → return to habitat immediately (3 min)\n3. Storm shelter in habitat: 10 g/cm² aluminum shielding reduces dose by ~80%\n4. Never EVA within 24h of solar flare alert (M-class or higher)\n\nCurrent forecast: QUIET — Kp=2, no SPE warnings. Safe to proceed.`;
+  }
+  if (lower.includes('dust storm') || lower.includes('dust devil') || lower.includes('dust')) {
+    return `DUST HAZARDS — JEZERO CRATER\n\nDUST STORMS\nCurrent τ = 0.5 — Clear conditions. EVA approved.\nThreshold for EVA abort: τ > 3.0 (visibility < 1 km, solar power < 30%)\nDust storm probability this sol: <10% (northern spring, low season)\nMonitor every 30 min via MCS orbital pass and MEDA local sensor.\n\nGlobal dust storm season: Northern summer. If triggered, all EVAs suspended for weeks to months (Opportunity rover was lost in 2018 GDS). Pre-positioned power reserves essential.\n\nDUST DEVILS\nJezero sees 3–15 dust devils per sol during peak heating (11:00–15:00 LMST).\nSize range: 30–400m diameter, wind speeds 25–35 m/s inside core.\nAction protocol:\n• Maintain 200m clearance from active dust devil\n• If approached: move perpendicular to track, not toward\n• Dust devils at this scale cannot tip an astronaut but will damage exposed instruments and reduce suit visibility\n• Wind force on suited astronaut: negligible (low Mars air density)`;
+  }
+  if (lower.includes('crism') || lower.includes('mineral') || lower.includes('carbonate') || lower.includes('biosig')) {
+    return `CRISM MINERALOGY — JEZERO CRATER\n\nCRISM (Compact Reconnaissance Imaging Spectrometer for Mars) aboard MRO detects mineral signatures at 18m/pixel using 544 spectral channels across visible to near-infrared.\n\nKey Jezero detections:\n• Mg-carbonates: At delta front scarp — precipitated from alkaline lake water, ideal biosignature preservation\n• Olivine: In crater floor unit — unweathered, indicating rapid burial; organics potentially preserved\n• Hydrated silicates: Opal/chalcedony type — forms around hydrothermal vents on Earth, prime biosignature host\n• Fe-smectites: In layered sediments — clay minerals formed in water, can trap organic molecules for billions of years\n\nWhy this matters for EVA:\nAll four mineral types at Jezero represent environments where Earth life was preserved as microfossils in the rock record. Your WP-4 and WP-6 targets are specifically chosen to sample the highest-CRISM-signal areas. Use SHERLOC Raman to confirm mineralogy in-situ before collecting drill samples.`;
+  }
+  if (lower.includes('suit') || lower.includes('eva') || lower.includes('spacesuit') || lower.includes('xemu')) {
+    return `MARS EVA SUIT SYSTEMS\n\nThe xEMU (Exploration Extravehicular Mobility Unit) or next-generation Mars suit must operate at −80°C to −20°C surface temperatures and 700 Pa atmospheric pressure.\n\nKey suit parameters for your EVA:\n• Internal pressure: 41.4 kPa (8.3 psi) O2/N2 mix — pre-breathe protocol: 40 min at 10.2 psi before EVA\n• Mobility: Full range of motion to 15° slopes; crouch, kneel, collect samples\n• Duration: 8 hr nominal life support (6 hr EVA + 2 hr emergency reserve)\n• Thermal: Active liquid cooling garment; heaters for extremities; 23% more battery drain below −50°C\n• Contamination: Positive pressure prevents Mars atmosphere ingress; decon brush on gloves\n\nMars-specific issues vs. Lunar:\n• Dust is more adhesive and ubiquitous — seal all sample containers immediately\n• Perchlorate in regolith is toxic — no regolith contact with suit inlet ports\n• UV is extreme despite thin atmosphere — visor UV coating essential\n• Lower gravity (0.38g) means less fatigue but different balance/locomotion`;
+  }
+  if (lower.includes('perseverance') || lower.includes('rover') || lower.includes('m2020') || lower.includes('curiosity')) {
+    return `ROVER HERITAGE DATA FOR EVA PLANNING\n\nPERSEVERANCE (Mars 2020)\nCurrent sol: ~${currentSol}\nTotal distance traversed: ~18 km in Jezero Crater\nGround truth value for EVA:\n• RIMFAX ground-penetrating radar: confirms no subsurface voids along primary EVA route\n• MEDA weather station: 1200+ sol climate dataset for refined EVA window planning\n• AutoNav terrain maps: 3D surface model at 20cm resolution — all waypoints pre-cleared\n• Cached sample tubes: 24 samples at 10 depot sites — 10 in your EVA zone (WP-8)\n• SHERLOC/PIXL precursor scans: identified exact mineralogy at your P1 targets\n\nCURIOSITY (MSL) — at Gale Crater\nProvides cross-site comparison data: regolith chemistry, wind patterns, diurnal cycles.\nKey EVA inputs: Confirmed 0.5 wt% perchlorate (standard for Mars), regolith shear strength 7 kPa.\n\nData integration: Both rover datasets are embedded in MarswalkAI's route planning model.`;
+  }
+  if (lower.includes('oxygen') || lower.includes('o2') || lower.includes('moxie') || lower.includes('isru')) {
+    return `IN-SITU RESOURCE UTILISATION (ISRU) — MARS\n\nMOXIE (Mars Oxygen ISRU Experiment) aboard Perseverance demonstrated O2 production from Mars CO2 (atmospheric CO2 → O2 + CO via solid oxide electrolysis).\n\nMOXIE results (verified): Produced 122g O2 total across 16 experimental runs. Achieved 98% purity. Peak rate: 10.44 g/hr O2.\n\nFor human EVA sustainability:\n• Full astronaut EVA O2 demand: ~1 kg/hr\n• Required ISRU scale-up: 100× MOXIE for 1 crew member → Mars base requires industrial ISRU units\n• Arcadia Planitia water ice (accessible 10–30 cm depth) → electrolysis can produce O2 + H2 (rocket propellant)\n\nCurrent EVA dependency:\nYour 6-hr, 2-person EVA requires 12 kg O2 + 4 kg reserve = 16 kg total.\nAll supplied from habitat tanked storage (Earth-launched). ISRU becomes critical after sol ~300 for a sustained base.`;
+  }
+  return `MarswalkAI response — Current EVA context: ${SITES[currentSite]?.name || 'Jezero Crater'}\n\nBased on integrated NASA data sources (MOLA, CRISM, THEMIS, HiRISE, MCS, Perseverance), here is my assessment for your query:\n\n"${msg}"\n\nThis is an important consideration for EVA planning. Key factors to evaluate:\n\n1. Safety margin — always maintain 30% resource reserves (O2, battery, water)\n2. NASA data integration — cross-check CRISM mineralogy with HiRISE terrain before approach\n3. Comm window — align critical operations with DSN contact (prevent autonomous-ops during high-risk activities)\n4. Science return — prioritise irreversible operations (drill samples, tube retrieval) early in EVA\n\nFor a specific, detailed analysis, enable Demo Mode or connect your IBM watsonx credentials.\n\n— MarswalkAI × IBM watsonx Granite`;
+}
+
+// ── Typewriter ──
+async function typeText(el, text, speed = 12) {
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  for (let i = 0; i < text.length; i++) {
+    el.textContent += text[i];
+    if (i % 4 === 0) await sleep(speed);
+    try { el.parentElement.scrollTop = el.parentElement.scrollHeight; } catch(e) {}
+  }
+  el.className = 'ai-text';
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Init ──
+updateSite();
+renderTerrainProfile();
+renderForecast();
+</script>
+</body>
+</html>

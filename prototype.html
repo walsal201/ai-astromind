@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AstroMind — AI Deep Space Mission Planner | IBM watsonx</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #121828;
+    --card: #1a2236;
+    --border: #2a3550;
+    --accent: #3b82f6;
+    --accent2: #7c3aed;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --ibm: #0f62fe;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0a0e1a 0%, #0f1e3d 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { font-size: 22px; }
+  .logo-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 1px; }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .ibm-badge {
+    background: var(--ibm);
+    color: white;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  /* ── Layout ── */
+  .app { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 60px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .panel-title {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  select, input, textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--ibm); color: white; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary { background: var(--card); color: var(--accent); border: 1px solid var(--accent); margin-top: 6px; }
+  .btn-secondary:hover { background: var(--accent); color: white; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .api-section input { font-size: 11px; }
+  .api-hint { font-size: 10px; color: var(--muted); margin-top: -6px; margin-bottom: 10px; }
+
+  /* ── Main area ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+  }
+  .tab {
+    padding: 14px 18px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Content panels ── */
+  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Mission Dashboard ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+  /* ── AI Response area ── */
+  .ai-output {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-top: 16px;
+    min-height: 200px;
+    position: relative;
+  }
+  .ai-output-title {
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ai-badge {
+    background: var(--ibm);
+    color: white;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+  .ai-text { color: var(--text); line-height: 1.8; white-space: pre-wrap; font-size: 13px; }
+  .ai-placeholder { color: var(--muted); font-style: italic; font-size: 12px; }
+
+  /* ── Typing animation ── */
+  .typing-cursor::after {
+    content: '█';
+    animation: blink 0.8s step-end infinite;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Risk cards ── */
+  .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  .risk-card {
+    background: var(--card);
+    border-radius: 6px;
+    padding: 16px;
+    border-left: 3px solid;
+  }
+  .risk-critical { border-color: var(--danger); }
+  .risk-high { border-color: var(--warn); }
+  .risk-medium { border-color: var(--accent); }
+  .risk-low { border-color: var(--success); }
+  .risk-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .risk-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .badge-critical { background: #7f1d1d; color: #fca5a5; }
+  .badge-high { background: #78350f; color: #fcd34d; }
+  .badge-medium { background: #1e3a5f; color: #93c5fd; }
+  .badge-low { background: #064e3b; color: #6ee7b7; }
+  .risk-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Chat interface ── */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .chat-msg {
+    display: flex;
+    gap: 10px;
+    max-width: 90%;
+  }
+  .chat-msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .chat-msg.ai { align-self: flex-start; }
+  .msg-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .avatar-ai { background: var(--ibm); }
+  .avatar-user { background: var(--accent2); }
+  .msg-bubble {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .msg-bubble.user { background: #1e2d5a; border-color: var(--accent2); }
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-row input { margin: 0; flex: 1; }
+  .chat-send-btn {
+    background: var(--ibm);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  .chat-send-btn:hover { opacity: 0.9; }
+  .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Section titles ── */
+  .section-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin-left: 8px;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 24px;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+  .status-dot.loading { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Trajectory viz ── */
+  .traj-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  svg.orbit-svg { display: block; margin: 0 auto; }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; margin-top: 16px; }
+  .tl-item {
+    display: flex;
+    gap: 16px;
+    padding: 12px 0;
+    border-left: 2px solid var(--border);
+    padding-left: 20px;
+    position: relative;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 18px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .tl-date { font-size: 10px; color: var(--muted); white-space: nowrap; min-width: 80px; }
+  .tl-content { flex: 1; }
+  .tl-title { font-size: 12px; font-weight: 700; }
+  .tl-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-icon">🛸</span>
+    <div>
+      <div class="logo-text">ASTROMIND</div>
+      <div class="logo-sub">AI Deep Space Mission Planner</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <a href="marswalk.html" style="background:#c1440e;color:#fff;font-size:10px;padding:4px 10px;border-radius:3px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔴 MARSWALK AI</a>
+    <span class="ibm-badge">IBM WATSONX</span>
+    <span style="font-size:11px; color:var(--muted);">Powered by IBM Bob</span>
+    <a href="index.html" style="font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:1px;">← HOME</a>
+  </div>
+</header>
+
+<div class="app">
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside class="sidebar">
+
+    <!-- API Config -->
+    <div class="api-section">
+      <div class="panel-title">⚙ IBM watsonx Config</div>
+      <label>API Key</label>
+      <input type="password" id="apiKey" placeholder="Enter watsonx API key…">
+      <label>Project ID</label>
+      <input type="text" id="projectId" placeholder="Enter project ID…">
+      <div class="api-hint">🔒 Credentials stay in your browser — never sent to third parties</div>
+      <button class="btn btn-secondary" onclick="enableDemoMode()">▶ Run in Demo Mode</button>
+    </div>
+
+    <!-- Mission Config -->
+    <div>
+      <div class="panel-title">🚀 Mission Parameters</div>
+      <label>Destination</label>
+      <select id="destination">
+        <option value="mars">Mars</option>
+        <option value="europa">Europa (Jupiter system)</option>
+        <option value="titan">Titan (Saturn system)</option>
+        <option value="asteroid">Near-Earth Asteroid</option>
+        <option value="lunar_gateway">Lunar Gateway</option>
+        <option value="venus">Venus Flyby</option>
+      </select>
+      <label>Mission Type</label>
+      <select id="missionType">
+        <option value="crewed">Crewed Mission</option>
+        <option value="robotic">Robotic Lander</option>
+        <option value="flyby">Flyby / Observation</option>
+        <option value="sample_return">Sample Return</option>
+        <option value="orbiter">Orbital Survey</option>
+      </select>
+      <label>Launch Year</label>
+      <select id="launchYear">
+        <option>2026</option>
+        <option selected>2027</option>
+        <option>2028</option>
+        <option>2029</option>
+        <option>2030</option>
+        <option>2033</option>
+      </select>
+      <label>Crew Size (0 = robotic)</label>
+      <input type="number" id="crewSize" value="4" min="0" max="12">
+      <label>Max Mission Duration (days)</label>
+      <input type="number" id="duration" value="900" min="30" max="3650">
+    </div>
+
+    <!-- Actions -->
+    <div>
+      <div class="panel-title">🤖 AI Actions</div>
+      <button class="btn btn-primary" onclick="generateMissionProfile()">Generate Mission Profile</button>
+      <button class="btn btn-secondary" onclick="analyzeRisks()">Analyze Mission Risks</button>
+      <button class="btn btn-secondary" onclick="generateTimeline()">Build Mission Timeline</button>
+      <button class="btn btn-secondary" onclick="generateDocument()">Draft Mission Brief</button>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <div class="main">
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('dashboard')">Dashboard</div>
+      <div class="tab" onclick="showTab('trajectory')">Trajectory</div>
+      <div class="tab" onclick="showTab('risks')">Risk Matrix</div>
+      <div class="tab" onclick="showTab('chat')">AI Chat</div>
+      <div class="tab" onclick="showTab('document')">Mission Brief</div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="tab-dashboard" class="content tab-panel active">
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-dv">—</div>
+          <div class="stat-label">Δv Budget (km/s)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-transit">—</div>
+          <div class="stat-label">Transit Time (days)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-dist">—</div>
+          <div class="stat-label">Peak Distance (AU)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-comm">—</div>
+          <div class="stat-label">Comm Delay (min)</div>
+        </div>
+      </div>
+
+      <div class="section-heading">AI Mission Profile</div>
+      <div class="ai-output" id="dashOutput">
+        <div class="ai-output-title">
+          🛸 ASTROMIND <span class="ai-badge">WATSONX AI</span>
+        </div>
+        <div class="ai-text ai-placeholder" id="dashText">
+Select a destination and mission type in the sidebar, then click "Generate Mission Profile" to receive a full AI-generated mission assessment using IBM watsonx Granite.
+
+You can also run in Demo Mode to see pre-generated responses without API credentials.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRAJECTORY ── -->
+    <div id="tab-trajectory" class="content tab-panel">
+      <div class="section-heading">Orbital Trajectory Visualiser</div>
+      <div class="traj-container">
+        <svg class="orbit-svg" id="orbitSVG" width="540" height="380" viewBox="0 0 540 380">
+          <rect width="540" height="380" fill="#0a0e1a" rx="8"/>
+          <!-- Sun -->
+          <circle cx="270" cy="190" r="18" fill="#FDB813" opacity="0.9"/>
+          <circle cx="270" cy="190" r="24" fill="none" stroke="#FDB813" stroke-width="1" opacity="0.3"/>
+          <text x="270" y="220" text-anchor="middle" fill="#FDB813" font-size="9" font-family="monospace">SUN</text>
+          <!-- Earth orbit -->
+          <ellipse cx="270" cy="190" rx="80" ry="50" fill="none" stroke="#2a4a8a" stroke-width="1" stroke-dasharray="4 3"/>
+          <circle cx="350" cy="190" r="7" fill="#1a6fb5"/>
+          <text x="358" y="186" fill="#93c5fd" font-size="8" font-family="monospace">EARTH</text>
+          <!-- Mars orbit -->
+          <ellipse cx="270" cy="190" rx="140" ry="88" fill="none" stroke="#6b3a2a" stroke-width="1" stroke-dasharray="4 3"/>
+          <circle cx="410" cy="190" r="5" fill="#c1440e" id="destPlanet"/>
+          <text x="418" y="186" fill="#fca5a5" font-size="8" font-family="monospace" id="destLabel">MARS</text>
+          <!-- Transfer arc placeholder -->
+          <path id="transferArc" d="M 350 190 Q 400 130 410 190" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6 3" opacity="0.8"/>
+          <!-- Spacecraft -->
+          <circle cx="380" cy="162" r="3" fill="#fff" id="spacecraft"/>
+          <text x="385" y="158" fill="#e2e8f0" font-size="8" font-family="monospace">🛸</text>
+          <!-- Labels -->
+          <text x="20" y="20" fill="#475569" font-size="9" font-family="monospace">ASTROMIND ORBITAL PLANNER — HOHMANN TRANSFER VISUALISER</text>
+          <text x="20" y="360" fill="#475569" font-size="8" font-family="monospace">Diagram not to scale · Orbits simplified for illustration</text>
+        </svg>
+      </div>
+
+      <div class="section-heading" style="margin-top:20px;">Transfer Trajectory Parameters</div>
+      <div class="ai-output" id="trajOutput">
+        <div class="ai-output-title">📡 TRAJECTORY ANALYSIS <span class="ai-badge">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="trajText">Generate a Mission Profile to populate trajectory calculations.</div>
+      </div>
+    </div>
+
+    <!-- ── RISK MATRIX ── -->
+    <div id="tab-risks" class="content tab-panel">
+      <div class="section-heading">Mission Risk Assessment</div>
+      <div id="riskGrid" class="risk-grid">
+        <div style="grid-column:1/-1; color:var(--muted); font-size:12px; font-style:italic; padding:20px 0;">
+          Click "Analyze Mission Risks" to generate an AI-powered risk matrix for your selected mission.
+        </div>
+      </div>
+      <div class="ai-output" style="margin-top:20px;" id="riskOutput" hidden>
+        <div class="ai-output-title">⚠ RISK INTELLIGENCE <span class="ai-badge">WATSONX AI</span></div>
+        <div class="ai-text" id="riskText"></div>
+      </div>
+    </div>
+
+    <!-- ── CHAT ── -->
+    <div id="tab-chat" class="content tab-panel" style="height:100%; display:none; flex-direction:column;">
+      <div class="chat-container">
+        <div class="section-heading">Mission AI Q&amp;A</div>
+        <div class="chat-history" id="chatHistory">
+          <div class="chat-msg ai">
+            <div class="msg-avatar avatar-ai">🛸</div>
+            <div class="msg-bubble">
+Hello! I'm AstroMind, your AI mission planning assistant powered by IBM watsonx.
+
+Ask me anything about your mission — trajectory windows, Δv budgets, crew safety margins, communication blackouts, power budgets, science objectives, or anything else about deep space exploration.
+
+How can I help you plan your mission today?
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="Ask a mission planning question…" onkeypress="if(event.key==='Enter')sendChat()">
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">▶ Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DOCUMENT ── -->
+    <div id="tab-document" class="content tab-panel">
+      <div class="section-heading">Mission Brief Document</div>
+      <div class="ai-output" id="docOutput">
+        <div class="ai-output-title">📄 MISSION BRIEF <span class="ai-badge">WATSONX AI</span></div>
+        <div class="ai-text ai-placeholder" id="docText">Click "Draft Mission Brief" to auto-generate a formal mission brief document ready for submission or presentation.</div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span><span class="status-dot" id="statusDot"></span> <span id="statusText">Ready · Demo Mode</span></span>
+      <span id="modelBadge">Model: IBM Granite-13b-Instruct-v2</span>
+      <span>AstroMind v1.0 · <a href="marswalk.html" style="color:var(--accent);text-decoration:none;">MarswalkAI →</a></span>
+      <span>IBM Bob Challenge 2024</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//   AstroMind — Mission Planning AI Core
+//   Built with IBM Bob (primary dev tool)
+//   Powered by IBM watsonx Granite
+// ═══════════════════════════════════════════
+
+let demoMode = false;
+let isLoading = false;
+
+// ── Orbital mechanics data (domain constants for prompt grounding) ──
+const MISSION_DATA = {
+  mars: {
+    dv: "5.6–6.3", transit: "180–270", dist: "1.52", commDelay: "3–22",
+    label: "MARS", color: "#c1440e", rx: 140, ry: 88, cx: 410, cy: 190,
+    description: "Red Planet — prime human destination",
+    hohmann_dv: 5.59, synodic_period: 779.9
+  },
+  europa: {
+    dv: "8.8–14.2", transit: "600–900", dist: "5.2", commDelay: "32–52",
+    label: "EUROPA", color: "#a8d8ea", rx: 200, ry: 120, cx: 470, cy: 190,
+    description: "Jupiter moon — subsurface ocean candidate for life"
+  },
+  titan: {
+    dv: "9.4–15.7", transit: "900–1800", dist: "9.58", commDelay: "68–84",
+    label: "TITAN", color: "#e8c070", rx: 220, ry: 135, cx: 485, cy: 190,
+    description: "Saturn moon — hydrocarbon seas and thick atmosphere"
+  },
+  asteroid: {
+    dv: "3.5–7.2", transit: "90–400", dist: "0.8–1.3", commDelay: "2–12",
+    label: "ASTEROID", color: "#9ca3af", rx: 100, ry: 62, cx: 370, cy: 190,
+    description: "Near-Earth Object — resource extraction or planetary defence"
+  },
+  lunar_gateway: {
+    dv: "3.2–3.9", transit: "3–5", dist: "0.0026", commDelay: "0.02",
+    label: "LUN. GATEWAY", color: "#c0c0c0", rx: 55, ry: 32, cx: 325, cy: 190,
+    description: "Lunar orbit station — gateway to deep space"
+  },
+  venus: {
+    dv: "4.7–5.8", transit: "100–150", dist: "0.72", commDelay: "2–14",
+    label: "VENUS", color: "#f0c040", rx: 65, ry: 40, cx: 335, cy: 190,
+    description: "Venus flyby — gravity assist candidate"
+  }
+};
+
+// ── Tab switching ──
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = '';
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  panel.classList.add('active');
+  if (name === 'chat') panel.style.display = 'flex';
+  event.currentTarget.classList.add('active');
+  if (name === 'trajectory') updateOrbitViz();
+}
+
+// ── Demo mode ──
+function enableDemoMode() {
+  demoMode = true;
+  setStatus('Demo Mode Active · Simulated AI Responses', false);
+  showNotification('Demo mode enabled! All AI actions will return realistic simulated responses.');
+}
+
+function showNotification(msg) {
+  const n = document.createElement('div');
+  n.style.cssText = 'position:fixed;top:70px;right:20px;background:#1e3a5f;border:1px solid #3b82f6;color:#93c5fd;padding:12px 16px;border-radius:6px;font-size:12px;z-index:999;max-width:300px;line-height:1.5;';
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 4000);
+}
+
+// ── Status bar ──
+function setStatus(msg, loading = false) {
+  document.getElementById('statusText').textContent = msg;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (loading ? ' loading' : '');
+}
+
+// ── Orbital visualiser update ──
+function updateOrbitViz() {
+  const dest = document.getElementById('destination').value;
+  const d = MISSION_DATA[dest];
+  if (!d) return;
+  const planet = document.getElementById('destPlanet');
+  const label = document.getElementById('destLabel');
+  const orbit = document.querySelector('ellipse:last-of-type');
+  planet.setAttribute('cx', d.cx); planet.setAttribute('cy', d.cy);
+  planet.setAttribute('fill', d.color);
+  label.setAttribute('x', d.cx + 8); label.setAttribute('y', d.cy - 4);
+  label.textContent = d.label;
+  const arc = document.getElementById('transferArc');
+  const mx = (350 + d.cx) / 2;
+  const my = Math.min(190, d.cy) - 50;
+  arc.setAttribute('d', `M 350 190 Q ${mx} ${my} ${d.cx} ${d.cy}`);
+}
+
+// ── Update stat cards ──
+function updateStats(dest) {
+  const d = MISSION_DATA[dest];
+  if (!d) return;
+  animateValue('stat-dv', d.dv);
+  animateValue('stat-transit', d.transit);
+  animateValue('stat-dist', d.dist);
+  animateValue('stat-comm', d.commDelay);
+}
+
+function animateValue(id, val) {
+  const el = document.getElementById(id);
+  el.style.opacity = '0';
+  setTimeout(() => { el.textContent = val; el.style.opacity = '1'; el.style.transition = 'opacity 0.4s'; }, 100);
+}
+
+// ═══════════════════════════════════════════
+//   IBM watsonx API Integration
+// ═══════════════════════════════════════════
+
+async function callWatsonx(prompt, systemPrompt) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const projectId = document.getElementById('projectId').value.trim();
+
+  if (!apiKey || !projectId) {
+    throw new Error('Please enter your IBM watsonx API key and Project ID, or enable Demo Mode.');
+  }
+
+  // Get IAM token
+  const tokenRes = await fetch('https://iam.cloud.ibm.com/identity/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${encodeURIComponent(apiKey)}`
+  });
+  if (!tokenRes.ok) throw new Error('IBM IAM authentication failed. Check your API key.');
+  const tokenData = await tokenRes.json();
+  const token = tokenData.access_token;
+
+  // Call watsonx text generation
+  const body = {
+    model_id: "ibm/granite-13b-instruct-v2",
+    input: `${systemPrompt}\n\nUser: ${prompt}\nAssistant:`,
+    parameters: {
+      decoding_method: "greedy",
+      max_new_tokens: 800,
+      min_new_tokens: 50,
+      stop_sequences: ["User:", "Human:"],
+      temperature: 0.7
+    },
+    project_id: projectId
+  };
+
+  const res = await fetch('https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`watsonx API error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  return data.results?.[0]?.generated_text?.trim() || 'No response generated.';
+}
+
+// ── System prompt (domain-grounded) ──
+const SYSTEM_PROMPT = `You are AstroMind, an expert AI mission planning assistant for deep space exploration. You have deep knowledge of:
+- Orbital mechanics, Hohmann transfers, gravity assists
+- Δv budgets (Earth escape: 3.2 km/s, trans-Mars injection: 0.6 km/s, Mars orbit insertion: 0.9 km/s)
+- Human spaceflight life support (crew consumables: ~3.5 kg/person/day)
+- Deep space communication (DSN coverage, light-speed delays)
+- Planetary science and mission heritage (Mars rovers, Cassini, Juno, New Horizons)
+- Risk analysis for space missions (launch, transit, EDL, surface ops)
+Provide precise, structured, expert-level mission planning guidance. Use specific numbers and cite relevant missions.`;
+
+// ═══════════════════════════════════════════
+//   Demo responses (offline mode)
+// ═══════════════════════════════════════════
+const DEMO_RESPONSES = {
+  profile_mars_crewed: `MISSION PROFILE: CREWED MARS MISSION 2027
+════════════════════════════════════════
+
+MISSION OVERVIEW
+Destination: Mars (Ares Vallis landing site candidate)
+Mission Type: Crewed Surface Mission
+Crew: 4 astronauts
+Total Duration: ~900 days (outbound 210d + 500d surface + return 190d)
+
+LAUNCH WINDOW
+Optimal window: April–May 2027 (synodic alignment)
+Launch Vehicle: SLS Block 2 or Starship HLS stack
+C3 (hyperbolic excess energy): 8.7 km²/s²
+
+Δv BUDGET
+├─ Earth escape + TMI:    3.87 km/s
+├─ Mid-course corrections: 0.10 km/s
+├─ Mars orbit insertion:   0.93 km/s
+├─ EDL (aerobraking):      ~0 km/s (atmosphere-assisted)
+├─ Surface departure:      3.72 km/s
+├─ Trans-Earth injection:  0.60 km/s
+└─ TOTAL:                  ~9.22 km/s
+
+TRANSIT OVERVIEW
+Outbound transit time: 210 days (Type II trajectory)
+Surface stay: 500 days (waiting for return window)
+Return transit: 190 days
+Total mission time: ~900 days
+
+COMMUNICATIONS
+Peak distance: 2.52 AU (opposition)
+Max one-way delay: 22.3 minutes
+DSN coverage required: 24h/day via Goldstone, Madrid, Canberra
+Blackout periods: ~2 weeks around solar conjunction
+
+POWER & LIFE SUPPORT
+Crew consumables: ~6,300 kg (4 crew × 3.5 kg/day × 450 days on transit)
+Power source: Solar arrays + RTG backup (Mars distance: 43% solar efficiency vs Earth)
+Habitat: Pre-deployed surface hab via robotic precursor mission (2025)
+
+MISSION HERITAGE ANALOGS
+This mission builds on: Mars Science Laboratory, Mars 2020, Mars InSight, and Artemis program experience.
+
+STATUS: Mission profile generated by AstroMind × IBM watsonx Granite`,
+
+  risk_mars_crewed: `RISK MATRIX: CREWED MARS 2027
+══════════════════════════════
+
+CRITICAL RISKS
+• Deep Space Radiation Exposure
+  Galactic cosmic rays + solar particle events during 420-day transit.
+  Mitigation: Water-wall shielding, storm shelter, real-time NOAA/ESA solar forecasting.
+
+• Long-Duration Microgravity Effects
+  Muscle atrophy, bone density loss, vision impairment (SANS syndrome).
+  Mitigation: 2+ hours daily resistance exercise, pharmacological countermeasures, ARED systems.
+
+HIGH RISKS
+• Communication Blackout (Solar Conjunction)
+  ~14-day blackout during Mars-Sun alignment — crew must operate autonomously.
+  Mitigation: AI autonomous operations mode, pre-loaded contingency procedures, 45-day food buffer.
+
+• EDL (Entry, Descent, Landing) Failure
+  Heritage: Mars has a ~50% historical landing success rate for surface missions.
+  Mitigation: Rigorous testing, abort modes, dual parachute systems, powered descent backup.
+
+• Propulsion System Failure
+  Critical for trans-Earth injection — no rescue possible.
+  Mitigation: Engine-out capability, spare propellant margin (10%), in-space repair procedures.
+
+MEDIUM RISKS
+• Dust Storm Obstruction (power loss)
+  Regional storms can reduce solar power by 90% for weeks.
+  Mitigation: RTG backup, pre-positioned energy reserves, storm season scheduling.
+
+• Psychological/Behavioral Issues
+  3-person crew dynamics over 900 days in confined space.
+  Mitigation: Crew selection psychology testing, AI mental health monitoring, private communication channels.
+
+RISK SUMMARY
+Overall mission risk: HIGH (crewed deep space first mission class)
+Acceptable with current technology: YES, with extensive precursor robotic program
+Recommended go/no-go threshold: 3 successful robotic precursor missions`,
+
+  timeline_mars: `MISSION TIMELINE: CREWED MARS 2027
+════════════════════════════════════
+
+2024-Q3  ▸ Mission architecture final selection
+2025-Q1  ▸ Crew selection and training commences (18-month program)
+2025-Q2  ▸ Precursor robotic lander launched (ISRU demonstrator)
+2025-Q4  ▸ Pre-deployed surface habitat launched on cargo mission
+2026-Q1  ▸ Flight hardware delivery and stacking at Kennedy Space Center
+2026-Q3  ▸ Full crew simulation: 60-day Mars analog at Haughton-Mars
+2026-Q4  ▸ Launch Readiness Review (LRR) completed
+2027-Apr ▸ 🚀 LAUNCH — Trans-Mars Injection burn
+2027-Oct ▸ Mars orbit insertion (MOI)
+2027-Nov ▸ EDL — surface landing (Ares Vallis site)
+2027-Nov ▸ Habitat connection, systems checkout
+2028-Q1  ▸ Full surface operations begin (geology, ISRU, life science)
+2028-Q3  ▸ Midpoint science review, sample collection
+2029-Feb ▸ Surface departure — Trans-Earth Injection
+2029-Jul ▸ 🏡 Earth return (direct re-entry)
+2029-Q3  ▸ Post-mission medical & science data analysis`,
+
+  brief_mars_crewed: `════════════════════════════════════════════════════
+MISSION BRIEF: ASTROMIND MARS EXPEDITION 2027 (AME-1)
+════════════════════════════════════════════════════
+
+CLASSIFICATION: CONCEPT DEVELOPMENT
+DATE: 2024 | PREPARED BY: AstroMind AI × IBM watsonx
+
+1. EXECUTIVE SUMMARY
+The AstroMind Mars Expedition 1 (AME-1) is a proposed human mission to the Martian surface targeting the 2027 launch window. A crew of four astronauts will conduct a 500-day surface program focused on geological survey, ISRU (In-Situ Resource Utilisation) demonstration, and astrobiology investigation. Total mission duration is approximately 900 days.
+
+2. MISSION OBJECTIVES
+PRIMARY:
+  [1] Safe round-trip transportation of 4 crew members to Mars surface and return
+  [2] ISRU propellant production demonstration (methane/LOx from atmospheric CO2)
+  [3] Geological survey of Ares Vallis for evidence of ancient habitability
+
+SECONDARY:
+  [4] Radiation environment characterisation for crew protection databases
+  [5] Deployment of seismic monitoring network (4 stations)
+  [6] High-resolution return sample collection (10 kg target)
+
+3. MISSION ARCHITECTURE
+Launch Vehicle: SLS Block 2 (crew) + Starship (cargo, pre-deploy)
+Propulsion: Chemical (TMI) + Aerobraking (MOI/EDL)
+Power: Deployable solar arrays (40 kWe) + RTG emergency
+Communications: X-band + Ka-band via DSN; Laser comm relay satellite
+
+4. RESOURCE SUMMARY
+Crew:          4 astronauts (commander, pilot, mission scientist, engineer)
+Launch mass:   ~130 tonnes (crew vehicle)
+Cargo mass:    ~85 tonnes pre-deployed
+Power budget:  40 kWe surface / 15 kWe transit
+Consumables:   8,400 kg (with 20% margin)
+Cost estimate: $18–22B USD over 10-year program
+
+5. KEY RISKS & MITIGATIONS
+Radiation → ECLSS shielding + storm shelter
+EDL uncertainty → dual-mode powered descent
+Dust storms → RTG backup + staged operations
+Crew health → Telemedicine AI, real-time monitoring
+
+6. RECOMMENDATION
+AME-1 is technically feasible with current or near-term technology. Recommend initiation of Phase A detailed studies and precursor robotic program by 2025 Q1.
+
+════════════════════════════════════════════════════
+Document generated by AstroMind × IBM watsonx Granite
+IBM Bob Challenge 2024 · Advance Space Exploration
+════════════════════════════════════════════════════`
+};
+
+// ═══════════════════════════════════════════
+//   Action handlers
+// ═══════════════════════════════════════════
+
+async function generateMissionProfile() {
+  const dest = document.getElementById('destination').value;
+  const type = document.getElementById('missionType').value;
+  const year = document.getElementById('launchYear').value;
+  const crew = document.getElementById('crewSize').value;
+
+  setStatus('Generating mission profile…', true);
+  updateStats(dest);
+
+  const outputEl = document.getElementById('dashText');
+  outputEl.className = 'ai-text typing-cursor';
+  outputEl.textContent = '';
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(1800);
+      text = DEMO_RESPONSES[`profile_${dest}_${type}`] ||
+        generateGenericProfile(dest, type, year, crew);
+    } else {
+      const prompt = `Generate a detailed mission profile for a ${type} to ${dest} launching in ${year} with ${crew} crew members. Include: Δv budget, transit time, launch window, key mission phases, power requirements, and communications plan.`;
+      text = await callWatsonx(prompt, SYSTEM_PROMPT);
+    }
+    await typeText(outputEl, text, 12);
+    setStatus('Mission profile generated · watsonx Granite', false);
+    updateOrbitViz();
+  } catch (e) {
+    outputEl.className = 'ai-text';
+    outputEl.textContent = '⚠ Error: ' + e.message;
+    setStatus('Error — see output', false);
+  }
+}
+
+async function analyzeRisks() {
+  const dest = document.getElementById('destination').value;
+  const type = document.getElementById('missionType').value;
+
+  setStatus('Analyzing mission risks…', true);
+  showTab_direct('risks');
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(1500);
+      text = DEMO_RESPONSES[`risk_${dest}_${type}`] || generateGenericRisk(dest, type);
+    } else {
+      const prompt = `Perform a comprehensive risk analysis for a ${type} to ${dest}. Identify top 6 risks, categorize as CRITICAL/HIGH/MEDIUM/LOW, describe failure modes and mitigation strategies.`;
+      text = await callWatsonx(prompt, SYSTEM_PROMPT);
+    }
+    renderRiskCards(dest, type);
+    const riskOut = document.getElementById('riskOutput');
+    riskOut.hidden = false;
+    const riskText = document.getElementById('riskText');
+    riskText.textContent = '';
+    await typeText(riskText, text, 10);
+    setStatus('Risk analysis complete · watsonx Granite', false);
+  } catch (e) {
+    setStatus('Error — ' + e.message.slice(0, 60), false);
+  }
+}
+
+async function generateTimeline() {
+  const dest = document.getElementById('destination').value;
+  const year = document.getElementById('launchYear').value;
+
+  setStatus('Building mission timeline…', true);
+  showTab_direct('document');
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(1200);
+      text = DEMO_RESPONSES[`timeline_${dest}`] || generateGenericTimeline(dest, year);
+    } else {
+      const prompt = `Create a detailed mission timeline for a mission to ${dest} launching in ${year}. Include all major milestones from program start through post-mission, with realistic dates.`;
+      text = await callWatsonx(prompt, SYSTEM_PROMPT);
+    }
+    const docText = document.getElementById('docText');
+    docText.className = 'ai-text';
+    docText.textContent = '';
+    await typeText(docText, text, 10);
+    setStatus('Timeline generated · watsonx Granite', false);
+  } catch (e) {
+    setStatus('Error — ' + e.message.slice(0, 60), false);
+  }
+}
+
+async function generateDocument() {
+  const dest = document.getElementById('destination').value;
+  const type = document.getElementById('missionType').value;
+  const crew = document.getElementById('crewSize').value;
+  const year = document.getElementById('launchYear').value;
+
+  setStatus('Drafting mission brief…', true);
+  showTab_direct('document');
+
+  try {
+    let text;
+    if (demoMode) {
+      await sleep(2000);
+      text = DEMO_RESPONSES[`brief_${dest}_${type}`] || generateGenericBrief(dest, type, crew, year);
+    } else {
+      const prompt = `Draft a formal mission brief document for a ${type} to ${dest} in ${year} with ${crew} crew. Include executive summary, mission objectives, architecture, resources, risks, and recommendation.`;
+      text = await callWatsonx(prompt, SYSTEM_PROMPT);
+    }
+    const docText = document.getElementById('docText');
+    docText.className = 'ai-text';
+    docText.textContent = '';
+    await typeText(docText, text, 8);
+    setStatus('Mission brief drafted · watsonx Granite', false);
+  } catch (e) {
+    setStatus('Error — ' + e.message.slice(0, 60), false);
+  }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || isLoading) return;
+
+  const history = document.getElementById('chatHistory');
+  input.value = '';
+  isLoading = true;
+  document.getElementById('chatSendBtn').disabled = true;
+
+  // Add user message
+  appendChatMsg(msg, 'user');
+
+  // Add AI thinking bubble
+  const thinkBubble = appendChatMsg('▌', 'ai');
+  setStatus('AI thinking…', true);
+
+  try {
+    let response;
+    if (demoMode) {
+      await sleep(1200);
+      response = getDemoChatResponse(msg);
+    } else {
+      const dest = document.getElementById('destination').value;
+      const contextPrompt = `${SYSTEM_PROMPT}\n\nCurrent mission context: ${dest} mission, ${document.getElementById('missionType').value}, launching ${document.getElementById('launchYear').value}, crew of ${document.getElementById('crewSize').value}.`;
+      response = await callWatsonx(msg, contextPrompt);
+    }
+    thinkBubble.textContent = '';
+    await typeText(thinkBubble, response, 15);
+    setStatus('Ready · watsonx Granite', false);
+  } catch (e) {
+    thinkBubble.textContent = '⚠ ' + e.message;
+    setStatus('Error', false);
+  }
+
+  isLoading = false;
+  document.getElementById('chatSendBtn').disabled = false;
+}
+
+function appendChatMsg(text, role) {
+  const history = document.getElementById('chatHistory');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar avatar-${role}`;
+  avatar.textContent = role === 'ai' ? '🛸' : '👨‍🚀';
+  const bubble = document.createElement('div');
+  bubble.className = `msg-bubble${role === 'user' ? ' user' : ''}`;
+  bubble.textContent = text;
+  msgDiv.appendChild(avatar);
+  msgDiv.appendChild(bubble);
+  history.appendChild(msgDiv);
+  history.scrollTop = history.scrollHeight;
+  return bubble;
+}
+
+// ── Render risk cards ──
+function renderRiskCards(dest, type) {
+  const grid = document.getElementById('riskGrid');
+  const risks = getRiskData(dest, type);
+  grid.innerHTML = risks.map(r => `
+    <div class="risk-card risk-${r.level.toLowerCase()}">
+      <div class="risk-title">${r.title}</div>
+      <span class="risk-badge badge-${r.level.toLowerCase()}">${r.level}</span>
+      <div class="risk-desc">${r.desc}</div>
+    </div>
+  `).join('');
+}
+
+function getRiskData(dest, type) {
+  const base = [
+    { title: "Launch Vehicle Failure", level: "HIGH", desc: "Catastrophic failure during ascent phase. Mitigation: Launch escape system, vehicle heritage qualification." },
+    { title: "Deep Space Radiation", level: "CRITICAL", desc: "GCR & SPE exposure over transit. Mitigation: Polyethylene shielding, storm shelter, real-time forecasting." },
+    { title: "Communication Loss", level: "HIGH", desc: "Solar conjunction blackout or hardware failure. Mitigation: Redundant transponders, autonomous ops protocols." },
+    { title: "Propulsion Failure", level: "CRITICAL", desc: "Engine out during critical burns. Mitigation: Engine-out capability, 10% propellant margin, repair procedures." },
+    { title: "Power System Degradation", level: "MEDIUM", desc: "Solar array degradation or micrometeorite strike. Mitigation: Redundant arrays, RTG backup, power management AI." },
+    { title: "Human Health (Long Duration)", level: "HIGH", desc: "Microgravity bone/muscle loss, SANS syndrome. Mitigation: Exercise countermeasures, pharmacological protocols." }
+  ];
+  if (dest === 'mars') base.push({ title: "Dust Storm (Power Loss)", level: "HIGH", desc: "Regional storms reduce solar power 90%. Mitigation: RTG backup, storm-season scheduling, energy reserves." });
+  if (type === 'crewed') base.push({ title: "Behavioral/Psychological", level: "MEDIUM", desc: "Crew conflict during 900-day isolation. Mitigation: Psychology screening, AI mental health monitoring." });
+  return base.slice(0, 6);
+}
+
+// ── Typing animation ──
+async function typeText(el, text, speed = 15) {
+  el.className = 'ai-text typing-cursor';
+  el.textContent = '';
+  for (let i = 0; i < text.length; i++) {
+    el.textContent += text[i];
+    if (i % 3 === 0) await sleep(speed);
+    el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  }
+  el.className = 'ai-text';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showTab_direct(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  panel.classList.add('active');
+  if (name === 'chat') panel.style.display = 'flex';
+  const tabs = ['dashboard','trajectory','risks','chat','document'];
+  const idx = tabs.indexOf(name);
+  if (idx >= 0) document.querySelectorAll('.tab')[idx].classList.add('active');
+}
+
+// ── Generic fallback generators ──
+function generateGenericProfile(dest, type, year, crew) {
+  const d = MISSION_DATA[dest] || {};
+  return `MISSION PROFILE: ${type.toUpperCase()} TO ${dest.toUpperCase()} — ${year}
+${'═'.repeat(50)}
+
+DESTINATION: ${dest.toUpperCase()}
+${d.description || ''}
+
+LAUNCH WINDOW: ${year} optimal alignment
+Δv BUDGET: ${d.dv || '~7'} km/s total
+TRANSIT TIME: ${d.transit || '~300'} days
+CREW SIZE: ${crew}
+COMM DELAY: ${d.commDelay || '~10'} minutes (one-way)
+PEAK DISTANCE: ${d.dist || '~2'} AU
+
+KEY MISSION PHASES:
+1. Pre-launch (T-24 months): Final integration & testing
+2. Launch & injection (Day 0): Launch vehicle ascent
+3. Cruise phase (Days 1–${(d.transit||'300').split('–')[0]}): Systems checkout, science
+4. Orbital insertion: Propulsive burn or aerobraking
+5. ${type === 'crewed' ? 'Surface ops' : 'Primary science ops'}: Core mission activities
+6. Departure & return: Trans-Earth trajectory
+
+Generated by AstroMind × IBM watsonx Granite`;
+}
+
+function generateGenericRisk(dest, type) {
+  return `Risk analysis for ${type} to ${dest} — See risk cards above for detailed breakdown.\n\nAll critical and high risks have documented mitigation strategies. Mission risk profile is within acceptable bounds for mission class.\n\nGenerated by AstroMind × IBM watsonx Granite`;
+}
+
+function generateGenericTimeline(dest, year) {
+  return `MISSION TIMELINE: ${dest.toUpperCase()} — ${year}\n${'═'.repeat(40)}\n\n${parseInt(year)-3}   ▸ Mission concept study\n${parseInt(year)-2}   ▸ System requirements review\n${parseInt(year)-1}   ▸ Critical design review\n${year}-Q1 ▸ Flight hardware delivery\n${year}-Q2 ▸ 🚀 LAUNCH\n${year}-Q4 ▸ Destination arrival\n${parseInt(year)+1}  ▸ Primary mission phase\n${parseInt(year)+2}  ▸ Extended mission / return\n\nGenerated by AstroMind × IBM watsonx Granite`;
+}
+
+function generateGenericBrief(dest, type, crew, year) {
+  return `MISSION BRIEF: ${dest.toUpperCase()} ${type.toUpperCase()} — ${year}\n${'═'.repeat(50)}\n\n1. EXECUTIVE SUMMARY\nProposed ${type} to ${dest} in ${year} with ${crew} crew members.\n\n2. OBJECTIVES\n- Primary science investigation\n- Technology demonstration\n- ${crew > 0 ? 'Safe crew transportation' : 'Robotic exploration'}\n\n3. ARCHITECTURE\nLaunch vehicle TBD based on mass budget\nPropulsion: Chemical + optional gravity assists\n\n4. STATUS: Concept Phase\nNext step: Detailed feasibility study\n\nGenerated by AstroMind × IBM watsonx Granite`;
+}
+
+function getDemoChatResponse(msg) {
+  const lower = msg.toLowerCase();
+  if (lower.includes('δv') || lower.includes('delta v') || lower.includes('dv')) {
+    return `Great question on Δv budgeting!\n\nFor a Mars mission, the total Δv budget breaks down as:\n• Earth escape C3: ~3.87 km/s (TMI burn)\n• Mid-course corrections: ~0.10 km/s\n• Mars orbit insertion: ~0.93 km/s\n• EDL: ~0 km/s (aerobraking takes care of this)\n• Mars ascent (crewed): ~3.72 km/s\n• Trans-Earth Injection: ~0.60 km/s\n\nTotal round-trip: ~9.2 km/s\n\nThis is why we use aerobraking at Mars — it saves ~0.9 km/s of propellant, equivalent to several tonnes of fuel!`;
+  }
+  if (lower.includes('radiation')) {
+    return `Radiation is one of the top risks for deep space missions.\n\nFor a Mars transit (~420 days round trip):\n• Galactic Cosmic Rays (GCR): ~0.3 Sv/year continuous exposure\n• Solar Particle Events (SPE): up to 1 Sv in hours during major flares\n• Total expected dose: ~0.5–1.0 Sv per crew member\n\nMitigation strategies:\n1. Polyethylene water-wall shielding (hydrogen-rich material)\n2. Solar storm shelter (densely shielded central hab volume)\n3. Real-time NOAA/ESA space weather forecasting\n4. Mission timing to avoid solar maximum (2025)\n5. Pharmacological radioprotectants (current NASA research)\n\nFor context: NASA's career limit is 0.6–1.2 Sv depending on age/sex, so Mars is at the edge of acceptable.`;
+  }
+  if (lower.includes('launch window') || lower.includes('2027')) {
+    return `The 2027 Mars launch window analysis:\n\nMars and Earth align favorably every ~26 months (synodic period: 779.9 days).\n\n2027 WINDOW DETAILS:\n• Optimal launch: April 15 – May 30, 2027\n• C3 range: 7.8–9.2 km²/s²\n• Transit time: 185–220 days (Type I/II trajectory)\n• Mars arrival: November 2027\n• Surface stay required: 450–550 days (waiting for return window)\n• Return launch: Feb–March 2029\n• Earth return: July–August 2029\n\nThe 2027 window is slightly less optimal than 2033 (the best opportunity this century), but still excellent and aligns with realistic program timelines.`;
+  }
+  if (lower.includes('europa') || lower.includes('jupiter')) {
+    return `Europa mission planning is one of the most exciting challenges in planetary science!\n\nKEY PARAMETERS:\n• Distance: 5.2 AU from Sun (at Jupiter)\n• Transit time: 6–8 years (with gravity assists via Venus/Earth/Earth)\n• Δv budget: ~8.8–14.2 km/s\n• Comm delay: 32–52 minutes one-way\n\nMajor mission challenges:\n1. Jupiter's radiation belts — among the harshest in the solar system (~560 krad at Europa)\n2. Ice shell penetration if subsurface ocean access is desired\n3. Power — solar panels at 5.2 AU produce only 3.7% of Earth-orbit output (RTGs required)\n\nHeritage: Europa Clipper (2024 launch) will characterise the ocean and identify landing sites. Any lander would follow by 2040s.`;
+  }
+  return `That's a great mission planning question! Based on your current mission configuration and orbital mechanics principles:\n\nThe key factors to consider are:\n1. Δv efficiency — minimise propellant mass through trajectory optimization\n2. Communication windows — plan critical operations during DSN coverage periods\n3. Power margins — always maintain 20% contingency in your power budget\n4. Abort options — define go/no-go criteria and abort trajectories at each phase\n\nWould you like me to go deeper on any specific aspect? I can analyse trajectories, risk factors, crew systems, communications, or science objectives in detail.\n\n— AstroMind × IBM watsonx Granite`;
+}
+
+// Initialise
+updateOrbitViz();
+setStatus('Ready · Demo Mode available', false);
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AstroMind — AI Space Mission Suite | IBM watsonx</title>
+<meta name="description" content="AI-Powered Space Mission Suite built with IBM Bob and IBM watsonx. AstroMind deep space planner + MarswalkAI NASA Mars surface explorer. Advance Space Exploration with AI Challenge 2024.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'IBM Plex Mono', 'Courier New', monospace;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 32px;
+    text-align: center;
+  }
+
+  .badge {
+    background: #0f62fe;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 3px;
+    margin-bottom: 28px;
+    display: inline-block;
+  }
+
+  .hero-icon { font-size: 52px; margin-bottom: 14px; }
+
+  h1 {
+    font-size: clamp(30px, 5.5vw, 58px);
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+  }
+  h1 span { color: #60a5fa; }
+
+  .tagline {
+    font-size: 15px;
+    color: #94a3b8;
+    max-width: 600px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+  }
+
+  /* ── Mission cards ── */
+  .card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 860px;
+    width: 100%;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 640px) { .card-row { grid-template-columns: 1fr; } }
+
+  .mission-card {
+    background: #121828;
+    border: 1px solid #2a3550;
+    border-radius: 8px;
+    padding: 28px 24px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .mission-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .mission-card.mars { border-top: 3px solid #c1440e; }
+  .mission-card.deep-space { border-top: 3px solid #0f62fe; }
+
+  .card-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    margin-bottom: 12px;
+  }
+  .badge-nasa { background: #0b3d91; color: #93c5fd; }
+  .badge-deep { background: #1e3a5f; color: #93c5fd; }
+
+  .card-icon { font-size: 36px; margin-bottom: 12px; }
+  .card-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .card-title span.hi { color: #e8642a; }
+  .card-title span.hi2 { color: #60a5fa; }
+  .card-desc { font-size: 12px; color: #94a3b8; line-height: 1.7; margin-bottom: 18px; }
+
+  .feature-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; }
+  .feature-item { font-size: 11px; color: #94a3b8; display: flex; align-items: flex-start; gap: 6px; }
+  .feature-item::before { content: '→'; color: #3b82f6; flex-shrink: 0; }
+  .mission-card.mars .feature-item::before { color: #e8642a; }
+
+  .card-btn {
+    display: inline-block;
+    padding: 11px 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: opacity 0.2s;
+  }
+  .card-btn:hover { opacity: 0.85; }
+  .btn-mars-color { background: #c1440e; color: #fff; }
+  .btn-ibm { background: #0f62fe; color: #fff; }
+
+  /* ── Data sources strip ── */
+  .data-strip {
+    max-width: 860px;
+    width: 100%;
+    background: #121828;
+    border: 1px solid #2a3550;
+    border-radius: 6px;
+    padding: 16px 24px;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+  .data-strip-title {
+    font-size: 9px;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .data-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+  .data-pill {
+    background: #1a2236;
+    border: 1px solid #2a3550;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    color: #64748b;
+  }
+
+  /* ── Footer links ── */
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  a.link-btn {
+    display: inline-block;
+    padding: 9px 20px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid #3b82f6;
+    color: #93c5fd;
+    transition: background 0.15s;
+  }
+  a.link-btn:hover { background: #3b82f6; color: #fff; }
+
+  .footer-note { font-size: 11px; color: #475569; line-height: 1.6; }
+  .footer-note a { color: #3b82f6; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="badge">Advance Space Exploration with AI — NASA Space Apps Challenge 2024</div>
+<div class="hero-icon">🚀</div>
+<h1>Astro<span>Mind</span></h1>
+<p class="tagline">IBM watsonx-powered AI space mission suite — combining deep space mission planning with an integrated NASA Mars surface explorer. Built with IBM Bob.</p>
+
+<div class="card-row">
+
+  <!-- MarswalkAI card -->
+  <div class="mission-card mars">
+    <span class="card-badge badge-nasa">NASA MARS · New Feature</span>
+    <div class="card-icon">🔴</div>
+    <div class="card-title">Marswalk<span class="hi">AI</span></div>
+    <div class="card-desc">Layered Mars surface explorer integrating 6 NASA science missions into a single EVA planning tool. Map your route, assess hazards, and plan your science — all AI-powered.</div>
+    <div class="feature-list">
+      <div class="feature-item">MOLA topography + HiRISE 25cm/px terrain overlay</div>
+      <div class="feature-item">CRISM mineralogy maps — biosignature targets flagged</div>
+      <div class="feature-item">THEMIS thermal inertia — trafficability assessment</div>
+      <div class="feature-item">MCS atmospheric / dust storm / wind forecast</div>
+      <div class="feature-item">Perseverance & Curiosity rover ground truth data</div>
+      <div class="feature-item">AI-generated route plan, hazard map, EVA checklist</div>
+    </div>
+    <a class="card-btn btn-mars-color" href="marswalk.html">Launch MarswalkAI →</a>
+  </div>
+
+  <!-- AstroMind card -->
+  <div class="mission-card deep-space">
+    <span class="card-badge badge-deep">Deep Space Planner</span>
+    <div class="card-icon">🛸</div>
+    <div class="card-title">Astro<span class="hi2">Mind</span></div>
+    <div class="card-desc">AI deep space mission planner for any destination in the solar system. Generate full mission profiles, risk matrices, trajectories, and formal mission briefs.</div>
+    <div class="feature-list">
+      <div class="feature-item">Mission profiles: Mars, Europa, Titan, Asteroid + more</div>
+      <div class="feature-item">Hohmann transfer orbital trajectory visualiser</div>
+      <div class="feature-item">AI risk matrix with CRITICAL / HIGH / MEDIUM grading</div>
+      <div class="feature-item">Mission timeline generator and formal brief drafter</div>
+      <div class="feature-item">IBM watsonx Granite AI Q&amp;A chat interface</div>
+      <div class="feature-item">Full offline demo mode — no credentials required</div>
+    </div>
+    <a class="card-btn btn-ibm" href="prototype.html">Launch AstroMind →</a>
+  </div>
+
+</div>
+
+<!-- NASA Data sources -->
+<div class="data-strip">
+  <div class="data-strip-title">NASA Science Mission Data Integrated into MarswalkAI</div>
+  <div class="data-pills">
+    <div class="data-pill">MOLA · Mars Global Surveyor</div>
+    <div class="data-pill">CRISM · MRO Spectrometer</div>
+    <div class="data-pill">THEMIS · Mars Odyssey</div>
+    <div class="data-pill">HiRISE · MRO Camera (25cm/px)</div>
+    <div class="data-pill">MCS · Mars Climate Sounder</div>
+    <div class="data-pill">Perseverance M2020 Ground Data</div>
+    <div class="data-pill">Curiosity MSL Heritage</div>
+    <div class="data-pill">InSight Seismic / Thermal</div>
+    <div class="data-pill">Phoenix MECA Chemistry</div>
+    <div class="data-pill">NOAA/ESA Space Weather</div>
+    <div class="data-pill">IBM watsonx Granite AI</div>
+    <div class="data-pill">IBM Bob (primary dev tool)</div>
+  </div>
+</div>
+
+<div class="footer-links">
+  <a class="link-btn" href="demo-video.html">Watch Demo Video</a>
+  <a class="link-btn" href="https://github.com/walsal201/Intelligent-Systems-for-the-Future-of-Work">GitHub Repository</a>
+  <a class="link-btn" href="docs/architecture.md">Architecture Docs</a>
+</div>
+
+<div class="footer-note">
+  Built with <a href="https://www.ibm.com/products/watsonx-ai" target="_blank">IBM watsonx</a> · 
+  Developed using <a href="https://www.ibm.com/products/bob" target="_blank">IBM Bob</a> · 
+  NASA Space Apps Challenge 2024 · 
+  <a href="https://www.nasa.gov/spaceapps/" target="_blank">spaceappschallenge.org</a>
+</div>
+
+</body>
+</html>
